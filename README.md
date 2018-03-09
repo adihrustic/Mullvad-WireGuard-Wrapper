@@ -1,5 +1,5 @@
 # mullvad_wg
-Simple script that makes it easier to use Mullvad's VPN with WireGuard
+Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 
 ## Prerequisites
 * [Mullvad Account](https://mullvad.net/)
@@ -9,7 +9,7 @@ sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update &&
 sudo apt-get install curl linux-headers-$(uname -r) wireguard-dkms wireguard-tools
 ```
 
-## Installion
+## Installation
 Simply run the following command in your terminal
 ```
 sudo make install
@@ -24,7 +24,7 @@ This will download the config file from Mullvad's website and run it. You will b
 
 ## Usage
 ### Connecting to a server
-To connect to a server, simply write:
+To connect to a server, simply write
 ```
 mullvad connect <server>
 ```
