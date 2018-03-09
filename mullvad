@@ -1,0 +1,143 @@
+#!/bin/bash
+
+#script that makes it easier to use WireGuard with Mullvad
+
+#Error function	
+error() {
+	echo "Error: $1" >&2
+	exit 1
+}
+
+kill_switch(){
+	local PostUp PreDown
+
+	echo "Turning $1 kill-switch"
+	echo "-----------------------"
+
+	PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark $\(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
+	PostUp=$(sed 's/iptables/ip6tables/' <<< "${PostUp/*/"$PostUp" && "$PostUp"}" )
+	PreDown=${PostUp//-I/-D}
+	
+	PostUp="PostUp = $PostUp"
+	PreDown="PreDown = $PreDown"	
+	
+	servers=$(egrep -o "^[^:]+" /etc/wireguard/*servers.txt 2>/dev/null)
+	#Resets the argument all to all the servers
+	if [[ $2 == all ]]; then set "$1" "$servers"; fi
+
+	#For every input, always remove the kill-switch
+	for arg in ${@:2} ; do
+		if grep -q "$arg" <<< "$servers"; then
+			sourceFile="/etc/wireguard/mullvad-$arg.conf"
+			umask 077
+			sudo grep -v "REJECT" "$sourceFile" > "/tmp/$arg.tmp"
+			sudo mv "/tmp/$arg.tmp" "$sourceFile"
+			sudo chown root: "$sourceFile"
+
+			#If cmd happens to be on, just add the kill-switch back
+			if [[ $1 == on ]]; then
+				sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
+			fi
+		else
+			echo "Error: $arg is not a valid server."
+		fi
+done 
+	echo "Done!"
+}
+
+main() {
+	#The syntax ${2:-se1} expands to se1 if $2 is unset or is set to the empty string.
+	CMD=$1
+	SERVER=mullvad-${2:-se1}
+	CURR_CONNECTION=$(sudo wg show interfaces)
+
+	case $CMD in
+		connect )
+			echo "Connecting to ${SERVER//*-}"
+			echo "-----------------------"
+			if [[ $CURR_CONNECTION ]]; then 
+				error "already connected to ${CURR_CONNECTION//*-}. Disconnect first if you wish to change."
+			else 
+				sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist."
+				echo "Connected!"
+			fi
+			;;
+
+		disconnect )
+			echo "Disconnecting VPN"
+			echo "-----------------------"
+			sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
+			echo "Disconnected"
+			;;
+
+		kill-switch-* )
+			KILL_SERVER=${*:2}
+			
+			if [[ $KILL_SERVER ]]; then
+				kill_switch "${CMD/*-}" "$KILL_SERVER"
+			else
+				error "please specify server(s)."
+			fi
+			;;		
+
+		status )
+			if [[ $CURR_CONNECTION ]]; then
+				sudo wg
+			else error "not connected."
+			fi
+			;;
+
+		update )
+			echo -e "Fetching server list\n"
+
+			curl -LO https://mullvad.net/media/files/mullvad-wg.sh
+			chmod +x ./mullvad-wg.sh
+
+			#Reads the output when running mullvad config file
+			while read -r line; do
+			if [[ $line =~ ,+ ]]; then 
+				REGIONS+=( "${line:2:${#REGIONS}-1}" )
+				elif [[ $line =~ mullvad ]]; then
+				CODES+=( "${line/*mullvad-/}" )
+				fi
+			done <<<"$(. mullvad-wg.sh)"
+
+			#Stores each code and region in an array, then sorts it alphabetically after code
+			for i in ${!CODES[*]}; do 
+  				ALL_SERVERS+=( "${CODES[$i]}:  ${REGIONS[$i]}" )
+			done
+			IFS=$'\n' ALL_SERVERS=( $(sort <<< "${ALL_SERVERS[*]}") )
+
+			#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
+			umask 077
+			printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' > /tmp/mullvad_servers.txt
+			sudo mv /tmp/mullvad_servers.txt /etc/wireguard/
+			main list
+			;;
+
+		list|ls|l )
+			echo "Available servers"
+			echo "-----------------------"
+			echo -e "$(cat /etc/wireguard/*servers.txt)" || error "no server list found. Try updating."
+			;;
+
+		help|-h )
+	  		echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
+	  		echo
+	  		echo -e "  connect \t\t\t Connects to the first Swedish server."
+	 		echo -e "  connect [<server>]\t Connects to a specified servers."
+	  		echo -e "  disconnect\t\t\t Disconnects from the active server."
+	  		echo -e "  kill-switch-{on|off}\t Changes the kill-switch value of specified server(s)."
+	 		echo -e "  list\t\t\t\t List available servers."
+	  		echo -e "  status\t\t\t Show current status of connection."
+	  		echo -e "  update\t\t\t Updates the server list."
+	 		echo
+	  		echo -e "  help\t\t\t\t Brings up this help menu."
+	  		echo
+			;;	
+		*)
+			error "unknown command, use $(basename "$0") --help for help."
+	esac
+}
+
+main "$@"
