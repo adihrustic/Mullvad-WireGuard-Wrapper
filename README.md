@@ -5,5 +5,7 @@
 
 Simply run "make install" in terminal
 
+---
+
 For more information go to:
 https://mullvad.net/en/guides/wireguard-and-mullvad-vpn/
