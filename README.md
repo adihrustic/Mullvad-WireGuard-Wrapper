@@ -1,9 +1,9 @@
 # mullvad_wg
-Simple script that makes it easier to use Mullvad's VPN with WireGuard
+**Simple script that makes it easier to use Mullvad's VPN with WireGuard**
 
-Requires WireGuard and a Mullvad Account
+*Requires WireGuard and a Mullvad Account*
 
-run "make install" in terminal
+Simply run "make install" in terminal
 
-For more info go to:
+For more information go to:
 https://mullvad.net/en/guides/wireguard-and-mullvad-vpn/
