@@ -96,7 +96,7 @@ main() {
 			#Reads the output when running mullvad config file
 			while read -r line; do
 			if [[ $line =~ ,+ ]]; then 
-				REGIONS+=( "${line:2:${#REGIONS}-1}" )
+				REGIONS+=( "${line:2:-1}" )
 				elif [[ $line =~ mullvad ]]; then
 				CODES+=( "${line/*mullvad-/}" )
 				fi
