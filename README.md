@@ -47,7 +47,7 @@ To enable a kill-switch, run
 mullvad kill-switch-on <server>
 ```
 
-It is possible to choose more than one server. To enable a kill-switch for all server at once run
+It is possible to choose more than one server. To enable a kill-switch for all servers at once run
 ```
 mullvad kill-switch-on all
 ```
@@ -82,7 +82,7 @@ us3:  Miami, USA
 us4:  Chicago, USA
 ```
 
-### Status of current connect
+### Status of current connection
 To get more detailed information about your connection, run
 ```
 mullvad status
