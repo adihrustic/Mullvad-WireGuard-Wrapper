@@ -7,7 +7,7 @@ _mullvad_completions()
     servers=$(egrep -o "^[^:]+" /etc/wireguard/*servers.txt 2>/dev/null)
 
     case "${prev}" in
-    	$(basename "$1")
+    	$(basename "$1"))
 			COMPREPLY=( $(compgen -W "${opts}" "${cur}") )
 			return 0
 			;;
