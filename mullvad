@@ -115,6 +115,13 @@ main() {
 			main list
 			;;
 
+		verify )
+			MYIP=$(curl -s https://api.ipify.org)
+			TARGETIP=$(curl -s https://am.i.mullvad.net)
+
+			[[ "$MYIP" == "$TARGETIP" ]] 1> "Verified!" || error "NO"
+		;;
+
 		list|ls|l )
 			echo "Available servers"
 			echo "-----------------------"
