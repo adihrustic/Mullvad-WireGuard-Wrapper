@@ -88,6 +88,12 @@ To get more detailed information about your connection, run
 mullvad status
 ```
 
+### Verifying connection
+To verify connection, run
+```
+mullvad verify
+```
+
 ### Help
 The help section can be accessed with
 ```
