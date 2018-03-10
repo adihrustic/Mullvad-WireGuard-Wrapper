@@ -10,10 +10,10 @@ error() {
 kill_switch_verify(){
     local ANS
 	echo -n "You are trying to change the kill-switch value of a server you're currently connected to. "
-	echo "This requires disconnecting from the server before doing."
+	echo "This requires disconnecting from the server before proceeding."
 	echo 
 	echo -n "The program will automatically reconnect you to the same server if you choose to proceed with the operation, "
-	echo "but will leave you unprotected and potentially vurnable for a very brief moment. This is not recommended."
+	echo "but will leave you unprotected and potentially vulnerable for a very brief moment. This is not recommended."
 	echo
 	echo -n "Do you wish to continue? [y/N] "
 
