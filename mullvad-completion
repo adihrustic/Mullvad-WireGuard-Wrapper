@@ -3,7 +3,7 @@ _mullvad_completions()
     local cur prev opts servers
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="connect disconnect status list update kill-switch-on kill-switch-off help"
+    opts="connect disconnect status list update kill-switch-on kill-switch-off help verify"
     servers=$(egrep -o "^[^:]+" /etc/wireguard/*servers.txt 2>/dev/null)
 
     case "${prev}" in
