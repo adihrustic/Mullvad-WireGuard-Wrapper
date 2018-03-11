@@ -5,8 +5,7 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 * [Mullvad Account](https://mullvad.net/)
 * WireGuard
 ```
-sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update && 
-sudo apt-get install curl linux-headers-$(uname -r) wireguard-dkms wireguard-tools
+sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update && sudo apt-get install curl linux-headers-$(uname -r) wireguard-dkms wireguard-tools
 ```
 
 ## Installation
@@ -47,14 +46,14 @@ Enable a kill-switch
 mullvad kill-switch-on <server>
 ```
 
-It is possible to choose multiple servers. To enable a kill-switch for all servers run
-```
-mullvad kill-switch-on all
-```
-
 Disable the kill-switch
 ```
 mullvad kill-switch-off <server>
+```
+
+It is possible to choose multiple servers. To enable a kill-switch for all servers run
+```
+mullvad kill-switch-on all
 ```
 
 ### Listing servers
@@ -106,8 +105,6 @@ mullvad help
 
 ## Authors
 Adi Hrustic
-
-
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
