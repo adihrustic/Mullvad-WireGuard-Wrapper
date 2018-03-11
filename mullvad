@@ -1,32 +1,32 @@
 #!/bin/bash
 #script that makes it easier to use WireGuard with Mullvad
 
-#Error function	
+#Error function
 error() {
 	echo "Error: $1" >&2
 	exit 1
 }
 
-kill_switch_verify(){
-    local ANS
+kill_switch_verify() {
+	local ANS
 	echo -n "You are trying to change the kill-switch value of a server you're currently connected to. "
 	echo "This requires disconnecting from the server before proceeding."
-	echo 
+	echo
 	echo -n "If you choose to proceed with the operation the program will automatically reconnect you and verify your connection, "
 	echo "but it will leave you unprotected and potentially vulnerable for a very brief moment. This is not recommended."
 	echo
 	echo -n "Do you wish to continue? [y/N] "
 
 	while :; do
-    read ANS
-	[[ $ANS =~ ^[yYnN]$ ]] && break    
-    echo -n "Invalid input, please try again [y/N] " 
+		read ANS
+		[[ $ANS =~ ^[yYnN]$ ]] && break
+		echo -n "Invalid input, please try again [y/N] "
 	done
 
-	USER_YES="${ANS//[Nn]}"
+	USER_YES="${ANS//[Nn]/}"
 }
 
-kill_switch(){
+kill_switch() {
 	local PostUp PreDown
 	echo "# Turning $1 kill-switch #"
 
@@ -34,27 +34,27 @@ kill_switch(){
 	PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
 	PreDown=${PostUp//-I/-D}
 	PreDown=${PreDown//PostUp/PreDown}
-		
+
 	servers=$(awk -F'[:]' '{print $1" "}' /etc/wireguard/*servers.txt 2>/dev/null)
 	#Resets the argument "$all" to all the servers
-	[[ $2 == all ]] && set "$1" "$servers"	
+	[[ $2 == all ]] && set "$1" "$servers"
 
-	for arg in ${*:2} ; do
+	for arg in ${*:2}; do
 		#Check if valid syntax
-		[[ $arg =~ ^([a-z]{2}[0-9]{1,2})$ ]] || (echo "Error: invalid input $arg." && continue)
+		[[ ! $arg =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo "Error: invalid input $arg." && continue
 
 		#Security check, see kill_switch_verify function above
-		if [[ "${CURR_CONNECTION//*-}" = "$arg" ]]; then
+		if [[ "${CURR_CONNECTION//*-/}" == "$arg" ]]; then
 			kill_switch_verify
 			[[ $USER_YES ]] || continue
 			"$0" disconnect &>/dev/null
 		fi
 
-		if grep -q "$arg" <<< "$servers"; then
+		if grep -q "$arg" <<<"$servers"; then
 			#always remove the kill-switch
 			sourceFile="/etc/wireguard/mullvad-$arg.conf"
 			umask 077
-			sudo awk '!/REJECT/' "$sourceFile" 1> "/tmp/$arg.tmp"
+			sudo awk '!/REJECT/' "$sourceFile" 1>"/tmp/$arg.tmp"
 			sudo mv "/tmp/$arg.tmp" "$sourceFile"
 			sudo chown root: "$sourceFile"
 
@@ -63,12 +63,12 @@ kill_switch(){
 		else
 			echo "Error: $arg is not a valid server."
 		fi
-	done 
+	done
 
-	if [[ -z $USER_YES ]]; then echo "Done."; exit 1; fi
+	[[ ! $USER_YES ]] && echo "Done." && exit 1
 	#Enables and verifies connection again (optional), see above
 	echo "# Reconnecting #"
-	"$0" connect "${CURR_CONNECTION//*-}" &>/dev/null && "$0" verify
+	"$0" connect "${CURR_CONNECTION//*-/}" &>/dev/null && "$0" verify
 }
 
 #The syntax ${2:-se1} expands to se1 if $2 is unset or is set to the empty string.
@@ -76,86 +76,87 @@ CMD=$1
 SERVER=mullvad-${2:-se1}
 CURR_CONNECTION=$(sudo wg show interfaces)
 case $CMD in
-	connect )
-		echo "# Connecting to ${SERVER//*-} #"
-		[[ -z $CURR_CONNECTION ]] || error "already connected to ${CURR_CONNECTION//*-}."
-		sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist."
-		echo "Connected!"
+connect)
+	echo "# Connecting to ${SERVER//*-/} #"
+	[[ -z $CURR_CONNECTION ]] || error "already connected to ${CURR_CONNECTION//*-/}."
+	sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist."
+	echo "Connected!"
 	;;
 
-	disconnect )
-		echo "# Disconnecting VPN #"
-		sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
-		echo "Disconnected"
+disconnect)
+	echo "# Disconnecting VPN #"
+	sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
+	echo "Disconnected"
 	;;
 
-	kill-switch-* )
-		KILL_SERVER=${*:2}
-		[[ $KILL_SERVER ]] || error "please specify server(s)."
-		kill_switch "${CMD/*-}" "$KILL_SERVER"
-	;;		
-
-	list|ls|l )
-		echo "Available servers"
-		echo "-----------------------"
-		echo -e "$(cat /etc/wireguard/*servers.txt)" || error "no server list found. Try updating."
+kill-switch-*)
+	KILL_SERVER=${*:2}
+	[[ $KILL_SERVER ]] || error "please specify server(s)."
+	kill_switch "${CMD/*-/}" "$KILL_SERVER"
 	;;
 
-	status )
-		[[ $CURR_CONNECTION ]] || error "not connected."
-		sudo wg
+list | ls | l)
+	echo "Available servers"
+	echo "-----------------------"
+	echo -e "$(cat /etc/wireguard/*servers.txt)" || error "no server list found. Try updating."
 	;;
 
-	update )
-		echo -e "# Fetching server list #\n"
-		curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
-		chmod +x ./mullvad-wg.sh
-
-		#Reads the output when running mullvad config file
-		while read -r line; do
-		[[ $line =~ ^[^\[]+:$ ]] && REGIONS+=( "${line:2:-1}" )
-		[[ $line =~ wg-quick ]]  && CODES+=( "${line/*mullvad-/}" )
-		done <<<"$(. mullvad-wg.sh)"
-
-		#Stores each code and region in an array, then sorts it alphabetically after code
-		for i in ${!CODES[*]}; do 
-			ALL_SERVERS+=( "${CODES[$i]}:  ${REGIONS[$i]}" )
-		done
-		IFS=$'\n' ALL_SERVERS=( $(sort <<< "${ALL_SERVERS[*]}") )
-		
-		#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
-		umask 077
-		printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' > /tmp/mullvad_servers.txt
-		sudo mv /tmp/mullvad_servers.txt /etc/wireguard/
-		rm ./mullvad-wg.sh
-		"$0" list
+status)
+	[[ $CURR_CONNECTION ]] || error "not connected."
+	sudo wg
 	;;
 
-	verify )
-		echo "# Verifying connection #"
-		[[ $CURR_CONNECTION ]] || error "not connected."
-		TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
-		MY_IP=$(curl -s https://am.i.mullvad.net/ip)
-		[[ "${TARGET_IP%.*}" = "${MY_IP%.*}" ]] || error "NOT able to verify!"; 
-		echo "OK!"
+update)
+	echo -e "# Fetching server list #\n"
+	curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
+	chmod +x ./mullvad-wg.sh
+
+	#Reads the output when running mullvad config file
+	while read -r line; do
+		[[ $line =~ ^[^\[]+:$ ]] && REGIONS+=("${line:2:-1}")
+		[[ $line =~ wg-quick ]] && CODES+=("${line/*mullvad-/}")
+	done <<<"$(. mullvad-wg.sh)"
+
+	#Stores each code and region in an array, then sorts it alphabetically after code
+	for i in ${!CODES[*]}; do
+		ALL_SERVERS+=("${CODES[$i]}:  ${REGIONS[$i]}")
+	done
+	IFS=$'\n' ALL_SERVERS=($(sort <<<"${ALL_SERVERS[*]}"))
+
+	#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
+	umask 077
+	printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
+	sudo mv /tmp/mullvad_servers.txt /etc/wireguard/
+	rm ./mullvad-wg.sh
+	"$0" list
 	;;
 
-	help|-h )
-  		echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
-  		echo
-  		echo -e "  connect \t\t\t Connects to the first Swedish server."
- 		echo -e "  connect [<server>]\t\t Connects to a specified servers."
-  		echo -e "  disconnect\t\t\t Disconnects from the active server."
-  		echo -e "  kill-switch-{on|off}\t\t Changes the kill-switch value of specified server(s)."
- 		echo -e "  list\t\t\t\t List available servers."
-  		echo -e "  status\t\t\t Show current status of connection."
-  		echo -e "  update\t\t\t Updates the server list."
-		echo -e "  verify\t\t\t Verify if you're connected to Mullvad."
- 		echo
-  		echo -e "  help\t\t\t\t Brings up this help menu."
-  		echo
-	;;	
-	
-	*)
-		error "unknown command, use $(basename "$0") --help for help."
+verify)
+	echo "# Verifying connection #"
+	[[ $CURR_CONNECTION ]] || error "not connected."
+	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
+	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
+	[[ "${TARGET_IP%.*}" == "${MY_IP%.*}" ]] || error "NOT able to verify!"
+	echo "OK!"
+	;;
+
+help | -h)
+	echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
+	echo
+	echo -e "  connect \t\t\t Connects to the first Swedish server."
+	echo -e "  connect [<server>]\t\t Connects to a specified servers."
+	echo -e "  disconnect\t\t\t Disconnects from the active server."
+	echo -e "  kill-switch-{on|off}\t\t Changes the kill-switch value of specified server(s)."
+	echo -e "  list\t\t\t\t List available servers."
+	echo -e "  status\t\t\t Show current status of connection."
+	echo -e "  update\t\t\t Updates the server list."
+	echo -e "  verify\t\t\t Verify if you're connected to Mullvad."
+	echo
+	echo -e "  help\t\t\t\t Brings up this help menu."
+	echo
+	;;
+
+*)
+	error "unknown command, use $(basename "$0") --help for help."
+	;;
 esac
