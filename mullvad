@@ -7,28 +7,40 @@ error() {
 	exit 1
 }
 
+server_change() {
+	sleep 1
+	local ANS
+	echo "Error: you're currently connected to ${CURR_CONNECTION//*-/}."
+	echo -n "Do you wish to change to ${SERVER//*-/}? [y/N] "
+
+	while :; do
+		read ANS
+		[[ $ANS =~ ^[yY]$ ]] && $0 disconnect &>/dev/null && break
+		[[ $ANS =~ ^[nN]$ ]] && error "aborted."
+		echo -n "Invalid input, please try again [y/N] "
+	done
+	echo -e "\n# Reconnecting #"
+}
+
 kill_switch_verify() {
 	local ANS
+	sleep 1
 	echo -n "You are trying to change the kill-switch value of a server you're currently connected to. "
 	echo "This requires disconnecting from the server before proceeding."
-	echo
-	echo -n "If you choose to proceed with the operation the program will automatically reconnect you and verify your connection, "
-	echo "but it will leave you unprotected and potentially vulnerable for a very brief moment. This is not recommended."
 	echo
 	echo -n "Do you wish to continue? [y/N] "
 
 	while :; do
 		read ANS
-		[[ $ANS =~ ^[yYnN]$ ]] && break
+		[[ $ANS =~ ^[yY]$ ]] && KS_YES=$ANS && break
+		[[ $ANS =~ ^[nN]$ ]] && break
 		echo -n "Invalid input, please try again [y/N] "
 	done
-
-	USER_YES="${ANS//[Nn]/}"
 }
 
 kill_switch() {
 	local PostUp PreDown
-	echo "# Turning $1 kill-switch #"
+	echo -e "# Turning $1 kill-switch #\n"
 
 	PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark \$(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
 	PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
@@ -39,33 +51,33 @@ kill_switch() {
 	#Resets the argument "$all" to all the servers
 	[[ $2 == all ]] && set "$1" "$servers"
 
-	for arg in ${*:2}; do
+	for ARG in ${*:2}; do
 		#Check if valid syntax
-		[[ ! $arg =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo "Error: invalid input $arg." && continue
+		[[ ! $ARG =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo "Error: invalid input $ARG." && continue
 
 		#Security check, see kill_switch_verify function above
-		if [[ "${CURR_CONNECTION//*-/}" == "$arg" ]]; then
+		if [[ "${CURR_CONNECTION//*-/}" == "$ARG" ]]; then
 			kill_switch_verify
-			[[ $USER_YES ]] || continue
+			[[ $KS_YES ]] || continue
 			"$0" disconnect &>/dev/null
 		fi
 
-		if grep -q "$arg" <<<"$servers"; then
+		if grep -q "$ARG" <<<"$servers"; then
 			#always remove the kill-switch
-			sourceFile="/etc/wireguard/mullvad-$arg.conf"
+			sourceFile="/etc/wireguard/mullvad-$ARG.conf"
 			umask 077
-			sudo awk '!/REJECT/' "$sourceFile" 1>"/tmp/$arg.tmp"
-			sudo mv "/tmp/$arg.tmp" "$sourceFile"
+			sudo awk '!/REJECT/' "$sourceFile" 1>"/tmp/$ARG.tmp"
+			sudo mv "/tmp/$ARG.tmp" "$sourceFile"
 			sudo chown root: "$sourceFile"
 
 			#If cmd happens to be "on", just add the kill-switch back
 			[[ $1 == on ]] && sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
 		else
-			echo "Error: $arg is not a valid server."
+			echo "Error: $ARG is not a valid server."
 		fi
 	done
 
-	[[ ! $USER_YES ]] && echo "Done." && exit 1
+	[[ ! $KS_YES ]] && echo "Done." && exit 1
 	#Enables and verifies connection again (optional), see above
 	echo "# Reconnecting #"
 	"$0" connect "${CURR_CONNECTION//*-/}" &>/dev/null && "$0" verify
@@ -75,24 +87,26 @@ kill_switch() {
 CMD=$1
 SERVER=mullvad-${2:-se1}
 CURR_CONNECTION=$(sudo wg show interfaces)
+
 case $CMD in
 connect)
-	echo "# Connecting to ${SERVER//*-/} #"
-	[[ -z $CURR_CONNECTION ]] || error "already connected to ${CURR_CONNECTION//*-/}."
-	sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist."
+	echo -e "# Connecting to ${SERVER//*-/} #\n"
+	[[ $CURR_CONNECTION != $SERVER ]] || error "already connected to ${SERVER//*-/}."
+	[[ ! $CURR_CONNECTION ]] || server_change
+	sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist, disconnecting."
 	echo "Connected!"
 	;;
 
 disconnect)
-	echo "# Disconnecting VPN #"
+	echo -e "# Disconnecting VPN #\n"
 	sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
 	echo "Disconnected"
 	;;
 
 kill-switch-*)
-	KILL_SERVER=${*:2}
-	[[ $KILL_SERVER ]] || error "please specify server(s)."
-	kill_switch "${CMD/*-/}" "$KILL_SERVER"
+	KS_SERVER=${*:2}
+	[[ $KS_SERVER ]] || error "please specify server(s)."
+	kill_switch "${CMD/*-/}" "$KS_SERVER"
 	;;
 
 list | ls | l)
@@ -132,7 +146,7 @@ update)
 	;;
 
 verify)
-	echo "# Verifying connection #"
+	echo -e "# Verifying connection #\n"
 	[[ $CURR_CONNECTION ]] || error "not connected."
 	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
 	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
