@@ -1,4 +1,4 @@
-# mullvad_wg
+# Mullvad WireGuard script
 Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 
 ## Prerequisites
@@ -15,7 +15,7 @@ Simply run the following command in your terminal
 sudo make install
 ```
 
-You then need to update the server list before you can connect to a server. Run
+You then need to update the server list before you can connect to a server
 ```
 mullvad update
 ```
@@ -42,17 +42,17 @@ mullvad disconnect
 ```
 
 ### Enabling/Disabling kill-switch
-To enable a kill-switch, run
+Enable a kill-switch
 ```
 mullvad kill-switch-on <server>
 ```
 
-It is possible to choose more than one server. To enable a kill-switch for all servers at once run
+It is possible to choose multiple servers. To enable a kill-switch for all servers run
 ```
 mullvad kill-switch-on all
 ```
 
-To disable the kill-switch, run
+Disable the kill-switch
 ```
 mullvad kill-switch-off <server>
 ```
@@ -107,7 +107,7 @@ mullvad help
 ## Authors
 Adi Hrustic
 
-[Contributors](https://github.com/adihrustic/mullvad_wg/graphs/contributors)
+
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
