@@ -108,21 +108,21 @@ case $CMD in
 
 	update )
 		echo -e "# Fetching server list #\n"
-		curl -LO https://mullvad.net/media/files/mullvad-wg.sh
+		curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
 		chmod +x ./mullvad-wg.sh
+
 		#Reads the output when running mullvad config file
 		while read -r line; do
-		if [[ $line =~ ,+ ]]; then 
-			REGIONS+=( "${line:2:-1}" )
-			elif [[ $line =~ mullvad ]]; then
-			CODES+=( "${line/*mullvad-/}" )
-			fi
+		[[ $line =~ ^[^\[]+:$ ]] && REGIONS+=( "${line:2:-1}" )
+		[[ $line =~ wg-quick ]]  && CODES+=( "${line/*mullvad-/}" )
 		done <<<"$(. mullvad-wg.sh)"
+
 		#Stores each code and region in an array, then sorts it alphabetically after code
 		for i in ${!CODES[*]}; do 
 			ALL_SERVERS+=( "${CODES[$i]}:  ${REGIONS[$i]}" )
 		done
 		IFS=$'\n' ALL_SERVERS=( $(sort <<< "${ALL_SERVERS[*]}") )
+		
 		#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
 		umask 077
 		printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' > /tmp/mullvad_servers.txt
