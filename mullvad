@@ -11,13 +11,13 @@ server_change() {
 	sleep 1
 	local ANS
 	echo "Error: you're currently connected to ${CURR_CONNECTION//*-/}."
-	echo -n "Do you wish to change to ${SERVER//*-/}? [y/N] "
+	echo -n "Do you wish to change to ${SERVER//*-/}? [Y/n] "
 
 	while :; do
 		read ANS
-		[[ $ANS =~ ^[yY]$ ]] && $0 disconnect &>/dev/null && break
-		[[ $ANS =~ ^[nN]$ ]] && error "aborted."
-		echo -n "Invalid input, please try again [y/N] "
+		[[ $ANS =~ ^(y|Y|^$)$ ]] && $0 disconnect &>/dev/null && break
+		[[ $ANS =~ ^(n|N)$    ]] && error "aborted."
+		echo -n "Invalid input, please try again [Y/n] "
 	done
 	echo -e "\n# Reconnecting #"
 }
@@ -28,13 +28,13 @@ kill_switch_verify() {
 	echo -n "You are trying to change the kill-switch value of a server you're currently connected to. "
 	echo "This requires disconnecting from the server before proceeding."
 	echo
-	echo -n "Do you wish to continue? [y/N] "
+	echo -n "Do you wish to continue? [Y/n] "
 
 	while :; do
 		read ANS
-		[[ $ANS =~ ^[yY]$ ]] && KS_YES=$ANS && break
-		[[ $ANS =~ ^[nN]$ ]] && break
-		echo -n "Invalid input, please try again [y/N] "
+		[[ $ANS =~ ^(y|Y|^$)$  ]] && KS_YES=$ANS && break
+		[[ $ANS =~ ^(n|N)$     ]] && break
+		echo -n "Invalid input, please try again [Y/n] "
 	done
 }
 
