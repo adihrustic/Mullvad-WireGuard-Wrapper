@@ -33,7 +33,7 @@ It it also possible to leave out server selection and only write
 mullvad connect
 ```
 
-Note that this is currently set to **se1** Malmö, Sweden.
+Note that this is currently set to **no1** Oslo, Norway.
 
 ### Disconnecting from a server
 ```
