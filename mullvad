@@ -1,16 +1,26 @@
 #!/bin/bash
 #script that makes it easier to use WireGuard with Mullvad
+RED='\033[1;31m' # Red color
+GREEN='\033[0;32m' # Green color"
+NC='\033[0m' # No Color
 
 #Error function
 error() {
-	echo "Error: $1" >&2
+	echo -e "${RED}Error: $1${NC}" >&2
 	exit 1
 }
 
+verify_connection(){
+	echo -e "# Verifying connection #"
+	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
+	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
+	[[ "${TARGET_IP%.*}" == "${MY_IP%.*}" ]] || error "NOT able to verify!"
+	echo -e "${GREEN}Connection verified!${NC}"
+}
+
 server_change() {
-	sleep 1
 	local ANS
-	echo "Error: you're currently connected to ${CURR_CONNECTION//*-/}."
+	echo -e "${RED}Error: you're currently connected to ${CURR_CONNECTION//*-/}.${NC}"
 	echo -n "Do you wish to change to ${SERVER//*-/}? [Y/n] "
 
 	while :; do
@@ -19,7 +29,7 @@ server_change() {
 		[[ $ANS =~ ^(n|N)$    ]] && error "aborted."
 		echo -n "Invalid input, please try again [Y/n] "
 	done
-	echo -e "\n# Reconnecting #"
+	echo -e "# Reconnecting #"
 }
 
 kill_switch_verify() {
@@ -40,7 +50,7 @@ kill_switch_verify() {
 
 kill_switch() {
 	local PostUp PreDown
-	echo -e "# Turning $1 kill-switch #\n"
+	echo -e "# Turning $1 kill-switch #"
 
 	PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark \$(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
 	PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
@@ -77,28 +87,32 @@ kill_switch() {
 		fi
 	done
 
-	[[ ! $KS_YES ]] && echo "Done." && exit 1
+	[[ ! $KS_YES ]] && echo -e "${GREEN}Done.${NC}" && exit 1
 	#Enables and verifies connection again (optional), see above
 	echo "# Reconnecting #"
 	"$0" connect "${CURR_CONNECTION//*-/}" &>/dev/null && "$0" verify
 }
 
-#The syntax ${2:-se1} expands to se1 if $2 is unset or is set to the empty string.
+#The syntax ${2:-no1} expands to no1 if $2 is unset or is set to the empty string.
 CMD=$1
-SERVER=mullvad-${2:-se1}
+SERVER=mullvad-${2:-no1}
 CURR_CONNECTION=$(sudo wg show interfaces)
 
 case $CMD in
 connect)
-	echo -e "# Connecting to ${SERVER//*-/} #\n"
+	echo -e "# Connecting to ${SERVER//*-/} #"
 	[[ $CURR_CONNECTION != $SERVER ]] || error "already connected to ${SERVER//*-/}."
+
 	[[ ! $CURR_CONNECTION ]] || server_change
 	sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist, disconnecting."
-	echo "Connected!"
+
+	echo -e "${GREEN}Connected!${NC}"
+	CURR_CONNECTION=$SERVER
+	verify_connection
 	;;
 
 disconnect)
-	echo -e "# Disconnecting VPN #\n"
+	echo -e "# Disconnecting VPN #"
 	sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
 	echo "Disconnected"
 	;;
@@ -121,7 +135,7 @@ status)
 	;;
 
 update)
-	echo -e "# Fetching server list #\n"
+	echo -e "# Fetching server list #"
 	curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
 	chmod +x ./mullvad-wg.sh
 
@@ -146,18 +160,14 @@ update)
 	;;
 
 verify)
-	echo -e "# Verifying connection #\n"
 	[[ $CURR_CONNECTION ]] || error "not connected."
-	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
-	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
-	[[ "${TARGET_IP%.*}" == "${MY_IP%.*}" ]] || error "NOT able to verify!"
-	echo "OK!"
+	verify_connection
 	;;
 
 help | -h)
 	echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
 	echo
-	echo -e "  connect \t\t\t Connects to the first Swedish server."
+	echo -e "  connect \t\t\t Connects to the first Norweigan server."
 	echo -e "  connect [<server>]\t\t Connects to a specified servers."
 	echo -e "  disconnect\t\t\t Disconnects from the active server."
 	echo -e "  kill-switch-{on|off}\t\t Changes the kill-switch value of specified server(s)."
