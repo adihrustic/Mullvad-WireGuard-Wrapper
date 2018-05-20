@@ -68,17 +68,21 @@ au1:  Sydney, Australia
 ca1:  Toronto, Canada
 ch1:  Zurich, Switzerland
 de1:  Frankfurt, Germany
+de2:  Frankfurt, Germany
 fr1:  Paris, France
 gb1:  London, UK
+gb2:  London, UK
 hk1:  Hong Kong, Hong Kong
 nl1:  Amsterdam, Netherland
 no1:  Oslo, Norway
+pl1:  Warsaw, Poland
 se1:  Malmö, Sweden
 se2:  Stockholm, Sweden
 us1:  New York, USA
 us2:  Los Angeles, USA
 us3:  Miami, USA
 us4:  Chicago, USA
+us5:  Seattle, USA
 ```
 
 ### Status of current connection
