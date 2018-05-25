@@ -3,6 +3,7 @@ install:
 		@cp ./mullvad /usr/local/bin/
 		@cp ./mullvad-completion /etc/bash_completion.d/
 		@. /etc/bash_completion.d/
+		@mkdir -p $$HOME/.config/mullvad
 	
 		@sleep 1
 		@echo "Installed! \n\nRun 'mullvad update' before trying to connect"

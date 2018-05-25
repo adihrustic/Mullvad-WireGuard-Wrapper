@@ -1,8 +1,8 @@
 #!/bin/bash
 #script that makes it easier to use WireGuard with Mullvad
-RED='\033[1;31m' # Red color
+RED='\033[1;31m'   # Red color
 GREEN='\033[0;32m' # Green color"
-NC='\033[0m' # No Color
+NC='\033[0m'       # No Color
 
 #Error function
 error() {
@@ -10,7 +10,7 @@ error() {
 	exit 1
 }
 
-verify_connection(){
+verify_connection() {
 	echo -e "# Verifying connection #"
 	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
 	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
@@ -26,7 +26,7 @@ server_change() {
 	while :; do
 		read ANS
 		[[ $ANS =~ ^(y|Y|^$)$ ]] && $0 disconnect &>/dev/null && break
-		[[ $ANS =~ ^(n|N)$    ]] && error "aborted."
+		[[ $ANS =~ ^(n|N)$ ]] && error "aborted."
 		echo -n "Invalid input, please try again [Y/n] "
 	done
 	echo -e "# Reconnecting #"
@@ -42,8 +42,8 @@ kill_switch_verify() {
 
 	while :; do
 		read ANS
-		[[ $ANS =~ ^(y|Y|^$)$  ]] && KS_YES=$ANS && break
-		[[ $ANS =~ ^(n|N)$     ]] && break
+		[[ $ANS =~ ^(y|Y|^$)$ ]] && KS_YES=$ANS && break
+		[[ $ANS =~ ^(n|N)$ ]] && break
 		echo -n "Invalid input, please try again [Y/n] "
 	done
 }
@@ -126,7 +126,7 @@ kill-switch-*)
 list | ls | l)
 	echo "Available servers"
 	echo "-----------------------"
-	echo -e "$(cat /etc/wireguard/*servers.txt)" || error "no server list found. Try updating."
+	echo -e "$(cat $HOME/.config/mullvad/*servers.txt)" || error "no server list found. Try updating."
 	;;
 
 status)
@@ -154,7 +154,7 @@ update)
 	#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
 	umask 077
 	printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
-	sudo mv /tmp/mullvad_servers.txt /etc/wireguard/
+	sudo mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
 	rm ./mullvad-wg.sh
 	"$0" list
 	;;
