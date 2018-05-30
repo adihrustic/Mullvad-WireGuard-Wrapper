@@ -6,6 +6,7 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 1. [Installation](https://github.com/adihrustic/Mullvad-WireGuard-script#installation)
 1. [Usage](https://github.com/adihrustic/Mullvad-WireGuard-script#usage)
     1. [Connecting](https://github.com/adihrustic/Mullvad-WireGuard-script#connecting-to-a-server)
+    1. [Updating default server](https://github.com/adihrustic/Mullvad-WireGuard-script#updating-default-server)
     1. [Disconnecting](https://github.com/adihrustic/Mullvad-WireGuard-script#disconnecting-from-a-server)
     1. [Kill-switch configuration](https://github.com/adihrustic/Mullvad-WireGuard-script#enablingdisabling-kill-switch)
     1. [Listing servers](https://github.com/adihrustic/Mullvad-WireGuard-script#listing-servers)
@@ -30,7 +31,7 @@ sudo make install
 
 You then need to update the server list before you can connect to a server
 ```
-mullvad update
+mullvad update servers
 ```
 
 This will download the config file from Mullvad's website and run it. You will be prompted to enter your account number.
@@ -42,17 +43,23 @@ To connect to a server, simply write
 mullvad connect <server>
 ```
 
-It it also possible to leave out server selection and only write
+It it also possible to leave out server selection and connect to default
 ```
 mullvad connect
 ```
 
-Note that this is currently set to **no1** Oslo, Norway.
+Note that this needs to be set with `mullvad update default`, before using the above command.
 
 ### Disconnecting from a server
 ```
 mullvad disconnect
 ```
+
+### Updating default server
+```
+mullvad update default
+```
+This command will let you set a default server of your choosing. Useful and practical.
 
 ### Enabling/Disabling kill-switch
 Enable a kill-switch
@@ -126,5 +133,3 @@ Adi Hrustic
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
-
-

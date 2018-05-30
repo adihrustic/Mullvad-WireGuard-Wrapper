@@ -18,6 +18,20 @@ verify_connection() {
 	echo -e "${GREEN}Connection verified!${NC}"
 }
 
+update_default() {
+	local ANS
+	echo -n "Please select the name of your default server (e.g. se1): "
+
+	while :; do
+		read ANS
+		[[ ! $ANS =~ ^$ ]] && break
+		echo -en "\nInvalid input, please try again: "
+	done
+
+	echo $ANS >$HOME/.config/mullvad/default.txt
+	echo -e "${GREEN}Default set to $ANS!${NC}"
+}
+
 server_change() {
 	local ANS
 	echo -e "${RED}Error: you're currently connected to ${CURR_CONNECTION//*-/}.${NC}"
@@ -93,17 +107,27 @@ kill_switch() {
 	"$0" connect "${CURR_CONNECTION//*-/}" &>/dev/null && "$0" verify
 }
 
-#The syntax ${2:-no1} expands to no1 if $2 is unset or is set to the empty string.
+#The syntax ${2:-DEFAULT} expands to default server if $2 is unset or is set to the empty string.
 CMD=$1
-SERVER=mullvad-${2:-no1}
+#If no default server set
+DEFAULT=$(cat $HOME/.config/mullvad/default.txt 2>/dev/null)
+if [ -z "$DEFAULT" ]; then
+	echo -e "${RED}Error: Default server needs to be set.${NC}"
+	update_default
+	DEFAULT=$(cat $HOME/.config/mullvad/default.txt 2>/dev/null) || error "Something went wrong."
+fi
+SERVER=mullvad-${2:-$DEFAULT}
 CURR_CONNECTION=$(sudo wg show interfaces)
-
 case $CMD in
 connect)
 	echo -e "# Connecting to ${SERVER//*-/} #"
+	#Check is already connecteed
 	[[ $CURR_CONNECTION != $SERVER ]] || error "already connected to ${SERVER//*-/}."
 
+	#If above try, ask if change
 	[[ ! $CURR_CONNECTION ]] || server_change
+
+	#Try to connect to chosen server, else throw error.
 	sudo wg-quick up "$SERVER" &>/dev/null || error "server does not exist, disconnecting."
 
 	echo -e "${GREEN}Connected!${NC}"
@@ -135,28 +159,39 @@ status)
 	;;
 
 update)
-	echo -e "# Fetching server list #"
-	curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
-	chmod +x ./mullvad-wg.sh
+	#If want to update default, do it.
+	if [[ $2 == "default" ]]; then
+		update_default
+		exit 1
 
-	#Reads the output when running mullvad config file
-	while read -r line; do
-		[[ $line =~ ^[^\[]+:$ ]] && REGIONS+=("${line:2:-1}")
-		[[ $line =~ wg-quick ]] && CODES+=("${line/*mullvad-/}")
-	done <<<"$(. mullvad-wg.sh)"
+		#Else if want to update the whole list
+	elif [[ $2 == "servers" ]]; then
 
-	#Stores each code and region in an array, then sorts it alphabetically after code
-	for i in ${!CODES[*]}; do
-		ALL_SERVERS+=("${CODES[$i]}:  ${REGIONS[$i]}")
-	done
-	IFS=$'\n' ALL_SERVERS=($(sort <<<"${ALL_SERVERS[*]}"))
+		echo -e "# Fetching server list #"
+		curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
+		chmod +x ./mullvad-wg.sh
 
-	#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
-	umask 077
-	printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
-	sudo mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
-	rm ./mullvad-wg.sh
-	"$0" list
+		#Reads the output when running mullvad config file
+		while read -r line; do
+			[[ $line =~ ^[^\[]+:$ ]] && REGIONS+=("${line:2:-1}")
+			[[ $line =~ wg-quick ]] && CODES+=("${line/*mullvad-/}")
+		done <<<"$(. mullvad-wg.sh)"
+
+		#Stores each code and region in an array, then sorts it alphabetically after code
+		for i in ${!CODES[*]}; do
+			ALL_SERVERS+=("${CODES[$i]}:  ${REGIONS[$i]}")
+		done
+		IFS=$'\n' ALL_SERVERS=($(sort <<<"${ALL_SERVERS[*]}"))
+
+		#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
+		umask 077
+		printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
+		sudo mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
+		rm ./mullvad-wg.sh
+		"$0" list
+	else
+		error "unknown command, use '$(basename "$0") help' for help."
+	fi
 	;;
 
 verify)
@@ -167,13 +202,14 @@ verify)
 help | -h)
 	echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
 	echo
-	echo -e "  connect \t\t\t Connects to the first Norweigan server."
+	echo -e "  connect \t\t\t Connects to the default server."
 	echo -e "  connect [<server>]\t\t Connects to a specified servers."
 	echo -e "  disconnect\t\t\t Disconnects from the active server."
 	echo -e "  kill-switch-{on|off}\t\t Changes the kill-switch value of specified server(s)."
 	echo -e "  list\t\t\t\t List available servers."
 	echo -e "  status\t\t\t Show current status of connection."
-	echo -e "  update\t\t\t Updates the server list."
+	echo -e "  update default\t\t Updates the default server."
+	echo -e "  update servers\t\t Updates the server list."
 	echo -e "  verify\t\t\t Verify if you're connected to Mullvad."
 	echo
 	echo -e "  help\t\t\t\t Brings up this help menu."
@@ -181,6 +217,6 @@ help | -h)
 	;;
 
 *)
-	error "unknown command, use $(basename "$0") --help for help."
+	error "unknown command, use '$(basename "$0") help' for help."
 	;;
 esac
