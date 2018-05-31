@@ -2,7 +2,7 @@ install:
 		@echo Installing...
 		@cp ./mullvad /usr/local/bin/
 		@cp ./mullvad-completion /etc/bash_completion.d/
-		@. /etc/bash_completion.d/
+		@. /etc/bash_completion.d/mullvad-completion
 		@mkdir -p $$HOME/.config/mullvad
 	
 		@sleep 1
