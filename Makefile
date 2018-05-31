@@ -6,7 +6,7 @@ install:
 		@mkdir -p $$HOME/.config/mullvad
 	
 		@sleep 1
-		@echo "Installed! \n\nRun 'mullvad update' before trying to connect"
+		@echo "Installed! \n\nRun 'mullvad update servers' before trying to connect"
 
 remove:
 		@echo Removing files...
