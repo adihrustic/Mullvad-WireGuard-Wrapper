@@ -56,7 +56,7 @@ kill_switch_verify() {
 
 	while :; do
 		read ANS
-		[[ $ANS =~ ^(y|Y|^$)$ ]] && KS_YES=$ANS && break
+		[[ $ANS =~ ^(y|Y|^$)$ ]] && KS_YES=true && break
 		[[ $ANS =~ ^(n|N)$ ]] && break
 		echo -n "Invalid input, please try again [Y/n] "
 	done
@@ -111,7 +111,7 @@ kill_switch() {
 CMD=$1
 DEFAULT=$(cat $HOME/.config/mullvad/default.txt 2>/dev/null)
 SERVER=mullvad-${2:-$DEFAULT}
-CURR_CONNECTION=$(sudo wg show interfaces)
+CURR_CONNECTION=$(wg show interfaces)
 case $CMD in
 connect)
 	#If no default server set
@@ -186,7 +186,7 @@ update)
 		#Writes the list to a text file and stores it, also takes care of the umlaut in "Malmö"
 		umask 077
 		printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
-		sudo mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
+		mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
 		rm ./mullvad-wg.sh
 		"$0" list
 	else
