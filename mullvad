@@ -77,7 +77,7 @@ kill_switch() {
 
 	for ARG in ${*:2}; do
 		#Check if valid syntax
-		[[ ! $ARG =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo "Error: invalid input $ARG." && continue
+		[[ ! $ARG =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo "${RED}Error: invalid input $ARG.${NC}" && continue
 
 		#Security check, see kill_switch_verify function above
 		if [[ "${CURR_CONNECTION//*-/}" == "$ARG" ]]; then
@@ -97,7 +97,7 @@ kill_switch() {
 			#If cmd happens to be "on", just add the kill-switch back
 			[[ $1 == on ]] && sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
 		else
-			echo "Error: $ARG is not a valid server."
+			echo "${RED}Error: $ARG is not a valid server.${NC}"
 		fi
 	done
 
@@ -138,7 +138,7 @@ connect)
 disconnect)
 	echo -e "# Disconnecting VPN #"
 	sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
-	echo "Disconnected"
+	"${GREEN}Disconnected${NC}"
 	;;
 
 kill-switch-*)

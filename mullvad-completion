@@ -16,7 +16,7 @@ _mullvad_completions()
             COMPREPLY=( $(compgen -W "${servers}" "${cur}") )
             return 0
             ;;
-        update)
+        update.*)
             COMPREPLY=( $(compgen -W "servers" "default") )
             return 0            
             ;;
