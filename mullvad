@@ -138,7 +138,7 @@ connect)
 disconnect)
 	echo -e "# Disconnecting VPN #"
 	sudo wg-quick down "$CURR_CONNECTION" &>/dev/null || error "not connected."
-	"${GREEN}Disconnected${NC}"
+	echo -e "${GREEN}Disconnected${NC}"
 	;;
 
 kill-switch-*)
