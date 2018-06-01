@@ -34,7 +34,7 @@ You then need to update the server list before you can connect to a server
 mullvad update servers
 ```
 
-This will download the config file from Mullvad's website and run it. You will be prompted to enter your account number.
+This will download the config file from Mullvad's website and run it. You will be prompted to enter your account number
 
 ## Usage
 ### Connecting to a server
