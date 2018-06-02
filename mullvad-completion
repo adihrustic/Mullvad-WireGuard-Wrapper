@@ -3,7 +3,7 @@ _mullvad_completions()
     local cur prev opts servers
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    opts="connect disconnect status list update kill-switch-on kill-switch-off help verify"
+    opts="connect disconnect status list update kill-switch start-up help verify"
     servers=$(egrep -o "^[^:]+" $HOME/.config/mullvad/*servers.txt 2>/dev/null)
 
 
@@ -20,8 +20,20 @@ _mullvad_completions()
             COMPREPLY=( $(compgen -W "servers default" "${cur}") )
             return 0            
             ;;
-        kill-switch-*)
-            COMPREPLY=( $(compgen -W "all ${servers}" "${cur}") )
+        kill-switch)
+            COMPREPLY=( $(compgen -W "on off" "${cur}") )
+            return 0
+            ;;
+        start-up)
+            COMPREPLY=( $(compgen -W "on off show" "${cur}") )
+            return 0
+            ;;
+        on|off)
+            if [ "${COMP_WORDS[COMP_CWORD-2]}" == kill-switch ]; then
+                COMPREPLY=( $(compgen -W "all ${servers}" "${cur}") ) 
+            else
+                COMPREPLY=( $(compgen -W "${servers}" "${cur}") ) 
+            fi
             return 0
             ;;
         $(grep -o "${prev}" <<< $servers))

@@ -10,11 +10,33 @@ error() {
 	exit 1
 }
 
+startup() {
+	local CURR_STARTUP TARGET CONFIG
+	CONFIG=$1                                             # On or off
+	TARGET=$2                                             # Target autostart, if any.
+	CURR_STARTUP=$(cat $HOME/.config/mullvad/start-up.txt 2>/dev/null) #get current autostart
+	if [[ $CONFIG == "on" ]]; then
+		#Can't have multiple
+		[[ -z "$CURR_STARTUP" ]] || error "Start up server already set to $CURR_STARTUP."
+		sudo systemctl enable wg-quick@mullvad-"$TARGET" &>/dev/null
+		echo $TARGET > $HOME/.config/mullvad/start-up.txt
+	elif [[ $CONFIG == "off" ]]; then
+		[[ $CURR_STARTUP ]] || error "No autostart is active."
+		sudo systemctl disable wg-quick@"$CURR_CONNECTION" &>/dev/null
+		echo "" > $HOME/.config/mullvad/start-up.txt
+	elif [[ $CONFIG == "show" ]]; then
+		echo -e "${GREEN}Current start-up is set to: $CURR_STARTUP${NC}"
+		exit 0
+	else
+		error "Bad input."
+	fi
+	echo -e "${GREEN}Done! Changes will apply on next reboot.${NC}"
+}
+
 verify_connection() {
 	echo -e "# Verifying connection #"
-	TARGET_IP=$(ping -c 1 "${CURR_CONNECTION//*-/}"-wireguard.mullvad.net | awk -F '[()]' '/PING/{print $2}')
-	MY_IP=$(curl -s https://am.i.mullvad.net/ip)
-	[[ "${TARGET_IP%.*}" == "${MY_IP%.*}" ]] || error "NOT able to verify!"
+	TARGET=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
+	[[ "${TARGET//-*/}" == "${CURR_CONNECTION//*-/}" ]] || error "NOT able to verify!"
 	echo -e "${GREEN}Connection verified!${NC}"
 }
 
@@ -29,6 +51,7 @@ update_default() {
 	done
 
 	echo $ANS >$HOME/.config/mullvad/default.txt
+	DEFAULT=$ANS
 	echo -e "${GREEN}Default set to $ANS!${NC}"
 }
 
@@ -95,7 +118,7 @@ kill_switch() {
 			sudo chown root: "$sourceFile"
 
 			#If cmd happens to be "on", just add the kill-switch back
-			[[ $1 == on ]] && sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
+			[[ "$1" == "on" ]] && sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
 		else
 			echo -e "${RED}Error: $ARG is not a valid server.${NC}"
 		fi
@@ -110,16 +133,11 @@ kill_switch() {
 #The syntax ${2:-DEFAULT} expands to default server if $2 is unset or is set to the empty string.
 CMD=$1
 DEFAULT=$(cat $HOME/.config/mullvad/default.txt 2>/dev/null)
+[[ -z "$DEFAULT" ]] && echo -e "${RED}Error: Default server needs to be set.${NC}" && update_default
 SERVER=mullvad-${2:-$DEFAULT}
 CURR_CONNECTION=$(wg show interfaces)
 case $CMD in
 connect)
-	#If no default server set
-	if [[ $2 == $DEFAULT && -z "$DEFAULT" ]]; then
-		echo -e "${RED}Error: Default server needs to be set.${NC}"
-		update_default
-		SERVER=mullvad-$(cat $HOME/.config/mullvad/default.txt 2>/dev/null)
-	fi
 	echo -e "# Connecting to ${SERVER//*-/} #"
 	#Check is already connecteed
 	[[ $CURR_CONNECTION != $SERVER ]] || error "already connected to ${SERVER//*-/}."
@@ -141,10 +159,10 @@ disconnect)
 	echo -e "${GREEN}Disconnected${NC}"
 	;;
 
-kill-switch-*)
-	KS_SERVER=${*:2}
-	[[ $KS_SERVER ]] || error "please specify server(s)."
-	kill_switch "${CMD/*-/}" "$KS_SERVER"
+kill-switch)
+	SERVER=${3:-$DEFAULT}
+	[[ $2 =~ on|off ]] || error "Invalid choice, aborting."
+	kill_switch "$2" "$SERVER"
 	;;
 
 list | ls | l)
@@ -152,6 +170,12 @@ list | ls | l)
 	echo "-----------------------"
 	echo -e "$(cat $HOME/.config/mullvad/*servers.txt)" || error "no server list found. Try updating."
 	;;
+
+start-up)
+	SERVER=${3:-$DEFAULT}
+	[[ $(grep "$SERVER" $HOME/.config/mullvad/*servers.txt) ]] || error "Invalid server, aborting."
+	startup "$2" "$SERVER"
+	;;	
 
 status)
 	[[ $CURR_CONNECTION ]] || error "not connected."
@@ -200,15 +224,15 @@ verify)
 	;;
 
 help | -h)
-	echo "Usage: $(basename "$0") <cmd> [<server>]" >&2
+	echo "Usage: $(basename "$0") <cmd> <server>" >&2
 	echo
 	echo -e "  connect \t\t\t Connects to the default server."
-	echo -e "  connect [<server>]\t\t Connects to a specified servers."
+	echo -e "  connect <server>\t\t Connects to a specified servers."
 	echo -e "  disconnect\t\t\t Disconnects from the active server."
 	echo -e "  kill-switch-{on|off}\t\t Changes the kill-switch value of specified server(s)."
 	echo -e "  list\t\t\t\t List available servers."
 	echo -e "  status\t\t\t Show current status of connection."
-	echo -e "  update default\t\t Updates the default server."
+	echo -e "  update default\t\t Sets a new default server."
 	echo -e "  update servers\t\t Updates the server list."
 	echo -e "  verify\t\t\t Verify if you're connected to Mullvad."
 	echo
