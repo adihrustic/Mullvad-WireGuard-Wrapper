@@ -212,7 +212,7 @@ update)
 		user=$(getent passwd "1000" | cut -d: -f1)
 		printf '%s\n' "${ALL_SERVERS[@]}" | sed -e 's/&ouml;/ö/g' >/tmp/mullvad_servers.txt
 		mv /tmp/mullvad_servers.txt $HOME/.config/mullvad/
-		chown $user:$user $HOME/.config/mullvad/
+		chown $user:$user $HOME/.config/mullvad/*servers.txt
 		rm ./mullvad-wg.sh
 		"$0" list
 

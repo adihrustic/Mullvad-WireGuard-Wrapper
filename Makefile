@@ -6,7 +6,7 @@ install:
 		@mkdir -p $$HOME/.config/mullvad
 	
 		@sleep 1
-		@echo "Installed! Updating the server list...\n\n"
+		@echo "Installed! Updating the server list...\n"
 		@mullvad update servers
 
 remove:
