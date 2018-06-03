@@ -42,14 +42,14 @@ startup() {
 
 verify_connection() {
 	local TARGET
-	echo -e "# Verifying connection #"
+	echo "# Verifying connection #"
 	TARGET=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
 	[[ "${TARGET//-*/}" == "${CURRENT_CONNECTION//*-/}" ]] || error "NOT able to verify!"
 	echo -e "${GREEN}Connection verified!${NC}"
 }
 
 update_default() {
-	echo -e "# Updating default server #"
+	echo "# Updating default server #"
 	local ANS
 	echo -n "Please select the name of your default server (e.g. se1): "
 	while :; do
@@ -142,7 +142,7 @@ AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' $HOME/.config/mullvad/*servers.t
 
 case $COMMAND in
 connect)
-	echo -e "# Connecting to ${TARGET_SERVER//*-/} #"
+	echo "# Connecting to ${TARGET_SERVER//*-/} #"
 	[[ $CURRENT_CONNECTION != $TARGET_SERVER ]] || error "already connected to ${TARGET_SERVER//*-/}."
 	[[ ! $CURRENT_CONNECTION ]] || server_change
 	sudo wg-quick up "$TARGET_SERVER" &>/dev/null || error "server does not exist, disconnecting."
@@ -153,7 +153,7 @@ connect)
 	;;
 
 disconnect)
-	echo -e "# Disconnecting VPN #"
+	echo "# Disconnecting VPN #"
 	sudo wg-quick down "$CURRENT_CONNECTION" &>/dev/null || error "not connected."
 	echo -e "${GREEN}Disconnected${NC}"
 	;;
@@ -191,7 +191,7 @@ update)
 		update_default
 
 	elif [[ $2 == "servers" ]]; then
-		echo -e "# Fetching server list #"
+		echo "# Fetching server list #"
 		curl -sLO https://mullvad.net/media/files/mullvad-wg.sh
 		chmod +x ./mullvad-wg.sh
 
