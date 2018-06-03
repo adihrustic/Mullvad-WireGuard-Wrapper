@@ -4,11 +4,10 @@ install:
 		@cp ./mullvad-completion /etc/bash_completion.d/
 		@. /etc/bash_completion.d/
 		@mkdir -p $$HOME/.config/mullvad
-		@ echo $$(systemctl | egrep -o wg-quick@mullvad-... | grep -o ...$$) > $$HOME/.config/mullvad/start-up.txt
-		@chown $$(getent passwd "1000" | cut -d: -f1): $$HOME/.config/mullvad/start-up.txt
 	
 		@sleep 1
-		@echo "Installed! \n\nRun 'mullvad update servers' before trying to connect"
+		@echo "Installed! Updating the server list...\n\n"
+		@mullvad update servers
 
 remove:
 		@echo Removing files...

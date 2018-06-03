@@ -11,7 +11,7 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
     1. [Kill-switch configuration](https://github.com/adihrustic/Mullvad-WireGuard-script#enablingdisabling-kill-switch)
     1. [Listing servers](https://github.com/adihrustic/Mullvad-WireGuard-script#listing-servers)
     1. [Connection status](https://github.com/adihrustic/Mullvad-WireGuard-script#status-of-current-connection)
-    1. [Verifying Connection](https://github.com/adihrustic/Mullvad-WireGuard-script#verifying-connection)
+    1. [Choosing start-up server](https://github.com/adihrustic/Mullvad-WireGuard-script#choosing-start-up-server)
 1. [More Information](https://github.com/adihrustic/Mullvad-WireGuard-script#more-information)
 1. [Authors](https://github.com/adihrustic/Mullvad-WireGuard-script#authors)
 1. [License](https://github.com/adihrustic/Mullvad-WireGuard-script#license)
@@ -29,12 +29,7 @@ Simply run the following command in your terminal
 sudo make install
 ```
 
-You then need to update the server list before you can connect to a server
-```
-mullvad update servers
-```
-
-This will download the config file from Mullvad's website and run it. You will be prompted to enter your account number
+This will also download the config file from Mullvad's website and run it. You will be prompted to enter your account number
 
 ## Usage
 ### Connecting to a server
@@ -59,22 +54,22 @@ mullvad disconnect
 ```
 mullvad update default
 ```
-This command will let you set a default server of your choosing. Useful and practical.
+This command will let you set a default server of your choosing. Use the `list` command to view the current default.
 
 ### Enabling/Disabling kill-switch
 Enable a kill-switch
 ```
-mullvad kill-switch-on <server>
+mullvad kill-switch on <server>
 ```
 
-Disable the kill-switch
+Disable a kill-switch
 ```
-mullvad kill-switch-off <server>
+mullvad kill-switch off <server>
 ```
 
 It is possible to choose multiple servers. To enable a kill-switch for all servers run
 ```
-mullvad kill-switch-on all
+mullvad kill-switch <on|off> all
 ```
 
 ### Listing servers
@@ -112,10 +107,10 @@ To get more detailed information about your connection, run
 mullvad status
 ```
 
-### Verifying connection
-To verify connection, run
+### Choosing start-up server
+It is possible to choose a server that will auto connect on boot.
 ```
-mullvad verify
+mullvad start-up <on|off> <server>
 ```
 
 ### Help

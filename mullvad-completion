@@ -24,6 +24,10 @@ _mullvad_completions()
             COMPREPLY=( $(compgen -W "on off" "${cur}") )
             return 0
             ;;
+        list|ls|l)
+            COMPREPLY=( $(compgen -W "default" "${cur}") )
+            return 0
+            ;;
         start-up)
             COMPREPLY=( $(compgen -W "on off show" "${cur}") )
             return 0
@@ -31,7 +35,7 @@ _mullvad_completions()
         on|off)
             if [ "${COMP_WORDS[COMP_CWORD-2]}" == kill-switch ]; then
                 COMPREPLY=( $(compgen -W "all ${servers}" "${cur}") ) 
-            else
+            elif [ "${COMP_WORDS[COMP_CWORD-2]}" == start-up ]; then
                 COMPREPLY=( $(compgen -W "${servers}" "${cur}") ) 
             fi
             return 0
