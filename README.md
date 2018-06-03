@@ -1,6 +1,8 @@
 # Mullvad WireGuard script
 Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 
+<img src="https://i.imgur.com/QqBj2Rm.gif" align="right" alt="mullvad" width="515" height="412">
+
 ### Table of Contents
 1. [Prerequisites](https://github.com/adihrustic/Mullvad-WireGuard-script#prerequisites)
 1. [Installation](https://github.com/adihrustic/Mullvad-WireGuard-script#installation)
@@ -15,6 +17,7 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 1. [More Information](https://github.com/adihrustic/Mullvad-WireGuard-script#more-information)
 1. [Authors](https://github.com/adihrustic/Mullvad-WireGuard-script#authors)
 1. [License](https://github.com/adihrustic/Mullvad-WireGuard-script#license)
+
 
 ## Prerequisites
 * [Mullvad Account](https://mullvad.net/)
