@@ -1,7 +1,7 @@
-# Mullvad WireGuard script
+# Mullvad WireGuard script  <img src="https://slethen.io/content/images/2017/01/mullvad-logo.png" align="left" width="40" height="40" alt="logo">
 Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 
-<img src="https://i.imgur.com/QqBj2Rm.gif" align="right" alt="mullvad" width="515" height="412">
+<img src="https://i.imgur.com/QqBj2Rm.gif" align="right" alt="gif" width="515" height="412">
 
 ### Table of Contents
 1. [Prerequisites](https://github.com/adihrustic/Mullvad-WireGuard-script#prerequisites)
