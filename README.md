@@ -22,8 +22,11 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 ## Prerequisites
 * [Mullvad Account](https://mullvad.net/)
 * WireGuard
+* curl
+* jq
+* resolvconf
 ```
-sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update && sudo apt-get install wireguard
+sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update && sudo apt-get install wireguard jq curl resolvconf
 ```
 
 ## Installation
