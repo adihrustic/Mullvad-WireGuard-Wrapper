@@ -23,11 +23,11 @@ startup() {
 
 	if [[ $OPTION == "on" ]]; then
 		[[ $ENABLED != enabled ]] || error "Start-up server already set to: $START_UP"
-		sudo systemctl enable wg-quick@mullvad-"$TARGET" &>/dev/null
+		sudo systemctl enable wg-quick@mullvad-"$TARGET" 1>/dev/null
 
 	elif [[ $OPTION == "off" ]]; then
 		[[ $ENABLED == enabled ]] || error "No start-up server is set."
-		sudo systemctl disable wg-quick@mullvad-"$START_UP" &>/dev/null
+		sudo systemctl disable wg-quick@mullvad-"$START_UP" 1>/dev/null
 
 	elif [[ $OPTION == "show" ]]; then
 		[[ $ENABLED == enabled ]] || START_UP=EMPTY
@@ -68,7 +68,7 @@ server_change() {
 	echo -n "Do you wish to change to ${TARGET_SERVER//*-/}? [Y/n] "
 	while :; do
 		read ANS
-		[[ $ANS =~ ^(y|Y|^$)$ ]] && $0 disconnect &>/dev/null && break
+		[[ $ANS =~ ^(y|Y|^$)$ ]] && $0 disconnect 1>/dev/null && break
 		[[ $ANS =~ ^(n|N)$ ]] && error "aborted."
 		echo -n "Invalid input, please try again [Y/n] "
 	done
@@ -107,7 +107,7 @@ kill_switch() {
 		if [[ "${CURRENT_CONNECTION//*-/}" == "$ARG" ]]; then
 			kill_switch_verify
 			[[ $KS_YES ]] || continue
-			"$0" disconnect &>/dev/null
+			"$0" disconnect 1>/dev/null
 		fi
 
 		if grep -q "$ARG" <<<"$AVAILABLE_SERVERS"; then
@@ -128,7 +128,7 @@ kill_switch() {
 	[[ ! $KS_YES ]] && echo -e "${GREEN}Done.${NC}" && exit 1
 	#Enables and verifies connection again (optional), see above
 	echo "# Reconnecting #"
-	"$0" connect "${CURRENT_CONNECTION//*-/}" &>/dev/null && "$0" verify
+	"$0" connect "${CURRENT_CONNECTION//*-/}" 1>/dev/null && "$0" verify
 }
 
 #The syntax ${2:-DEFAULT_SERVER} expands to default server if $2 is unset or is set to the empty string.
@@ -145,7 +145,7 @@ connect)
 	echo "# Connecting to ${TARGET_SERVER//*-/} #"
 	[[ $CURRENT_CONNECTION != $TARGET_SERVER ]] || error "already connected to ${TARGET_SERVER//*-/}."
 	[[ ! $CURRENT_CONNECTION ]] || server_change
-	sudo wg-quick up "$TARGET_SERVER" &>/dev/null || error "server does not exist, disconnecting."
+	sudo wg-quick up "$TARGET_SERVER" 1>/dev/null || error "server does not exist, disconnecting."
 	echo -e "${GREEN}Connected!${NC}"
 	#Verifies connection, always done
 	CURRENT_CONNECTION=$TARGET_SERVER
@@ -154,7 +154,7 @@ connect)
 
 disconnect)
 	echo "# Disconnecting VPN #"
-	sudo wg-quick down "$CURRENT_CONNECTION" &>/dev/null || error "not connected."
+	sudo wg-quick down "$CURRENT_CONNECTION" 1>/dev/null || error "not connected."
 	echo -e "${GREEN}Disconnected${NC}"
 	;;
 
