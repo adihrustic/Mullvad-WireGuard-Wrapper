@@ -1,3 +1,6 @@
+# [##Project moved to GitLab##](https://gitlab.com/adihrustic/Mullvad-WireGuard-script)
+
+---
 # Mullvad WireGuard script  <img src="https://slethen.io/content/images/2017/01/mullvad-logo.png" align="left" width="40" height="40" alt="logo">
 Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 
