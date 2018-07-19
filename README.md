@@ -25,11 +25,10 @@ Simple script that makes it easier to use Mullvad's VPN with WireGuard.
 ## Prerequisites
 * [Mullvad Account](https://mullvad.net/)
 * WireGuard
-* curl
-* jq
-* resolvconf
+
 ```
-sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update && sudo apt-get install wireguard jq curl resolvconf
+sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update;
+sudo apt-get install curl jq openresolv linux-headers-$(uname -r) wireguard-dkms wireguard-tools
 ```
 
 ## Installation
@@ -89,25 +88,36 @@ mullvad list
 
 The current available servers are
 ```
-au1:  Sydney, Australia
-ca1:  Toronto, Canada
-ch1:  Zurich, Switzerland
-de1:  Frankfurt, Germany
-de2:  Frankfurt, Germany
+au1:  Sydney, Australia                                                                                 
+ca1:  Toronto, Canada                                                                                   
+ch1:  Zurich, Switzerland                                                                               
+ch2:  Zurich, Switzerland                                                                               
+de1:  Frankfurt, Germany                                                                                
+de2:  Frankfurt, Germany                                                                                
+de3:  Berlin, Germany                                                                                   
+dk1:  Copenhagen, Denmark                                                                               
+es1:  Madrid, Spain                                                                                     
+fi1:  Helsinki, Finland                                                                                 
 fr1:  Paris, France
 gb1:  London, UK
 gb2:  London, UK
 hk1:  Hong Kong, Hong Kong
-nl1:  Amsterdam, Netherland
+nl1:  Amsterdam, Netherlands
 no1:  Oslo, Norway
 pl1:  Warsaw, Poland
+ro1:  Bucharest, Romania
 se1:  Malmö, Sweden
 se2:  Stockholm, Sweden
-us1:  New York, USA
-us2:  Los Angeles, USA
-us3:  Miami, USA
-us4:  Chicago, USA
-us5:  Seattle, USA
+se3:  Gothenburg, Sweden
+se4:  Malmö, Sweden
+sg1:  Singapore, Singapore
+us1:  New York, NY, USA
+us2:  Los Angeles, CA, USA
+us3:  Miami, FL, USA
+us4:  Chicago, IL, USA
+us5:  Seattle, WA, USA
+us6:  Atlanta, GA, USA
+us7:  Dallas, TX, USA
 ```
 
 ### Status of current connection
