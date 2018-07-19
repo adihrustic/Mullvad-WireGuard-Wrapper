@@ -88,16 +88,16 @@ mullvad list
 
 The current available servers are
 ```
-au1:  Sydney, Australia                                                                                 
-ca1:  Toronto, Canada                                                                                   
-ch1:  Zurich, Switzerland                                                                               
-ch2:  Zurich, Switzerland                                                                               
-de1:  Frankfurt, Germany                                                                                
-de2:  Frankfurt, Germany                                                                                
-de3:  Berlin, Germany                                                                                   
-dk1:  Copenhagen, Denmark                                                                               
-es1:  Madrid, Spain                                                                                     
-fi1:  Helsinki, Finland                                                                                 
+au1:  Sydney, Australia
+ca1:  Toronto, Canada
+ch1:  Zurich, Switzerland
+ch2:  Zurich, Switzerland
+de1:  Frankfurt, Germany
+de2:  Frankfurt, Germany
+de3:  Berlin, Germany
+dk1:  Copenhagen, Denmark
+es1:  Madrid, Spain
+fi1:  Helsinki, Finland
 fr1:  Paris, France
 gb1:  London, UK
 gb2:  London, UK
