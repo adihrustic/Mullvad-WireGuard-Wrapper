@@ -1,8 +1,7 @@
-# [##Project moved to GitLab##](https://gitlab.com/adihrustic/Mullvad-WireGuard-script)
+# [#Project moved to GitLab#](https://gitlab.com/adihrustic/Mullvad-WireGuard-Wrapper)
 
----
-# Mullvad WireGuard script  <img src="https://slethen.io/content/images/2017/01/mullvad-logo.png" align="left" width="40" height="40" alt="logo">
-Simple script that makes it easier to use Mullvad's VPN with WireGuard.
+# Mullvad WireGuard Wrapper  <img src="https://slethen.io/content/images/2017/01/mullvad-logo.png" align="left" width="40" height="40" alt="logo">
+Simple wrapper that makes it easier to use Mullvad's VPN with WireGuard.
 
 <img src="https://i.imgur.com/QqBj2Rm.gif" align="right" alt="gif" width="515" height="412">
 
@@ -60,7 +59,7 @@ mullvad disconnect
 
 ### Updating default server
 ```
-mullvad update default
+mullvad update default <server>
 ```
 This command will let you set a default server of your choosing. Use the `list` command to view the current default.
 
