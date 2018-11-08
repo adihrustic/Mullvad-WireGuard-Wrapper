@@ -8,20 +8,20 @@ Simple wrapper that makes it easier to use Mullvad's VPN with WireGuard.
 <img src="https://i.imgur.com/QqBj2Rm.gif" align="right" alt="gif" width="515" height="412">
 
 ### Table of Contents
-1. [Prerequisites](https://github.com/adihrustic/Mullvad-WireGuard-script#prerequisites)
-1. [Installation](https://github.com/adihrustic/Mullvad-WireGuard-script#installation)
-1. [Usage](https://github.com/adihrustic/Mullvad-WireGuard-script#usage)
-    1. [Connecting](https://github.com/adihrustic/Mullvad-WireGuard-script#connecting-to-a-server)
-    1. [Updating default server](https://github.com/adihrustic/Mullvad-WireGuard-script#updating-default-server)
-    1. [Disconnecting](https://github.com/adihrustic/Mullvad-WireGuard-script#disconnecting-from-a-server)
-    1. [Kill-switch configuration](https://github.com/adihrustic/Mullvad-WireGuard-script#enablingdisabling-kill-switch)
-    1. [Listing servers](https://github.com/adihrustic/Mullvad-WireGuard-script#listing-servers)
-    1. [Connection status](https://github.com/adihrustic/Mullvad-WireGuard-script#status-of-current-connection)
-    1. [Choosing start-up server](https://github.com/adihrustic/Mullvad-WireGuard-script#choosing-start-up-server)
-1. [Troubleshooting](https://github.com/adihrustic/Mullvad-WireGuard-script#troubleshooting)
-1. [More Information](https://github.com/adihrustic/Mullvad-WireGuard-script#more-information)
-1. [Authors](https://github.com/adihrustic/Mullvad-WireGuard-script#authors)
-1. [License](https://github.com/adihrustic/Mullvad-WireGuard-script#license)
+1. [Prerequisites](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#prerequisites)
+1. [Installation](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#installation)
+1. [Usage](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#usage)
+    1. [Connecting](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#connecting-to-a-server)
+    1. [Updating default server](https://github.com/adihrustic/Mullvad-WireGuard-sWrapper#updating-default-server)
+    1. [Disconnecting](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#disconnecting-from-a-server)
+    1. [Kill-switch configuration](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#enablingdisabling-kill-switch)
+    1. [Listing servers](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#listing-servers)
+    1. [Connection status](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#status-of-current-connection)
+    1. [Choosing start-up server](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#choosing-start-up-server)
+1. [Troubleshooting](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#troubleshooting)
+1. [More Information](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#more-information)
+1. [Authors](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#authors)
+1. [License](https://github.com/adihrustic/Mullvad-WireGuard-Wrapper#license)
 
 
 ## Prerequisites
