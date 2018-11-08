@@ -18,6 +18,7 @@ Simple wrapper that makes it easier to use Mullvad's VPN with WireGuard.
     1. [Listing servers](https://github.com/adihrustic/Mullvad-WireGuard-script#listing-servers)
     1. [Connection status](https://github.com/adihrustic/Mullvad-WireGuard-script#status-of-current-connection)
     1. [Choosing start-up server](https://github.com/adihrustic/Mullvad-WireGuard-script#choosing-start-up-server)
+1. [Troubleshooting](https://github.com/adihrustic/Mullvad-WireGuard-script#troubleshooting)
 1. [More Information](https://github.com/adihrustic/Mullvad-WireGuard-script#more-information)
 1. [Authors](https://github.com/adihrustic/Mullvad-WireGuard-script#authors)
 1. [License](https://github.com/adihrustic/Mullvad-WireGuard-script#license)
@@ -138,6 +139,10 @@ The help section can be accessed with
 ```
 mullvad help
 ```
+
+## Troubleshooting
+### Connection down when resuming after sleep or hibernation
+This is likely due to the network manager not using openresolv. [See here for a possible solution.](https://wiki.archlinux.org/index.php/NetworkManager#Use_openresolv)
 
 ## More information
 * [Running WireGuard with Mullvad on Linux](https://mullvad.net/en/guides/wireguard-and-mullvad-vpn/) - Mullvad's official guide.
