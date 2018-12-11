@@ -38,8 +38,7 @@ Simply run the following command in your terminal
 ```
 sudo make install
 ```
-
-This will also download the config file from Mullvad's website and run it. You will be prompted to enter your account number
+Before connecting you will need to use to update command to refresh the server list
 
 ## Usage
 ### Connecting to a server
