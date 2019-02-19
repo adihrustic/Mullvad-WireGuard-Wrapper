@@ -1,3 +1,6 @@
+# [#Project moved to GitLab#](https://gitlab.com/adihrustic/Mullvad-WireGuard-Wrapper)
+## Follow the above link or use the script file to fetch the project.
+------------------------
 # Mullvad WireGuard Wrapper  <img src="https://slethen.io/content/images/2017/01/mullvad-logo.png" align="left" width="40" height="40" alt="logo">
 Simple wrapper that makes it easier to use Mullvad's VPN with WireGuard.
 
