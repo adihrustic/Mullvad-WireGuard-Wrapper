@@ -159,6 +159,8 @@ mullvad help
 ## Troubleshooting
 ### Connection down when resuming after sleep or hibernation
 This is likely due to the network manager not using openresolv. [See here for a possible solution.](https://wiki.archlinux.org/index.php/NetworkManager#Use_openresolv)
+### Unable to remotely access local machines.
+Enabling the kill switch blocks all local traffic. Either add iptable rules to circumvent this or disable the kill switch.
 
 ## More information
 * [Running WireGuard with Mullvad on Linux](https://mullvad.net/en/guides/wireguard-and-mullvad-vpn/) - Mullvad's official guide.
