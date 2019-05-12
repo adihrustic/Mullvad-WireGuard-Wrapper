@@ -1,24 +1,21 @@
-# [#Project moved to GitLab#](https://gitlab.com/adihrustic/WireGuard-Wrapper)
-## Follow the above link or use the script file to fetch the project.
-------------------------
 # WireGuard Wrapper
 Simple wrapper that makes WireGuard easier to use with VPN providers.
 
 ### Table of Contents
-1. [Prerequisites](https://gitlab.com/adihrustic/WireGuard-Wrapper#prerequisites)
-1. [Installation](https://gitlab.com/adihrustic/WireGuard-Wrapper#installation)
-1. [Usage](https://gitlab.com/adihrustic/WireGuard-Wrapper#usage)
-    1. [Connecting](https://gitlab.com/adihrustic/WireGuard-Wrapper#connecting-to-a-server)
-    1. [Updating default server](https://gitlab.com/adihrustic/WireGuard-Wrapper#updating-default-server)
-    1. [Disconnecting](https://gitlab.com/adihrustic/WireGuard-Wrapper#disconnecting-from-a-server)
-    1. [Kill-switch configuration](https://gitlab.com/adihrustic/WireGuard-Wrapper#enablingdisabling-kill-switch)
-    1. [Listing servers](https://gitlab.com/adihrustic/WireGuard-Wrapper#listing-servers)
-    1. [Connection status](https://gitlab.com/adihrustic/WireGuard-Wrapper#status-of-current-connection)
-    1. [Choosing start-up server](https://gitlab.com/adihrustic/WireGuard-Wrapper#choosing-start-up-server)
-1. [Troubleshooting](https://gitlab.com/adihrustic/WireGuard-Wrapper#troubleshooting)
-1. [More Information](https://gitlab.com/adihrustic/WireGuard-Wrapper#more-information)
-1. [Authors](https://gitlab.com/adihrustic/WireGuard-Wrapper#authors)
-1. [License](https://gitlab.com/adihrustic/WireGuard-Wrapper#license)
+1. [Prerequisites](https://github.com/adihrustic/WireGuard-Wrapper#prerequisites)
+1. [Installation](https://github.com/adihrustic/WireGuard-Wrapper#installation)
+1. [Usage](https://github.com/adihrustic/WireGuard-Wrapper#usage)
+    1. [Connecting](https://github.com/adihrustic/WireGuard-Wrapper#connecting-to-a-server)
+    1. [Updating default server](https://github.com/adihrustic/WireGuard-Wrapper#updating-default-server)
+    1. [Disconnecting](https://github.com/adihrustic/WireGuard-Wrapper#disconnecting-from-a-server)
+    1. [Kill-switch configuration](https://github.com/adihrustic/WireGuard-Wrapper#enablingdisabling-kill-switch)
+    1. [Listing servers](https://github.com/adihrustic/WireGuard-Wrapper#listing-servers)
+    1. [Connection status](https://github.com/adihrustic/WireGuard-Wrapper#status-of-current-connection)
+    1. [Choosing start-up server](https://github.com/adihrustic/WireGuard-Wrapper#choosing-start-up-server)
+1. [Troubleshooting](https://github.com/adihrustic/WireGuard-Wrapper#troubleshooting)
+1. [More Information](https://github.com/adihrustic/WireGuard-Wrapper#more-information)
+1. [Authors](https://github.com/adihrustic/WireGuard-Wrapper#authors)
+1. [License](https://github.com/adihrustic/WireGuard-Wrapper#license)
 
 
 ## Prerequisites
