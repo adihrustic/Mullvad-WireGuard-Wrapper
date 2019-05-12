@@ -112,7 +112,7 @@ Yes. However I choose to implement a more general solution.
 
 ## More information
 * [Running WireGuard with Mullvad on Linux](https://mullvad.net/en/guides/wireguard-and-mullvad-vpn) - Mullvad's official guide.
-* [Running WirMullvad-eGuard with AzireVPN on Linux](https://www.azirevpn.com/support/guides/computer/linux/wireguard-cli) - AzireVPN's official guide.
+* [Running WireGuard with AzireVPN on Linux](https://www.azirevpn.com/support/guides/computer/linux/wireguard-cli) - AzireVPN's official guide.
 * [WireGuard](https://www.wireguard.com/) - Official WireGuard website.
 
 ## Authors
