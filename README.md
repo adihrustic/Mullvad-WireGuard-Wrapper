@@ -24,7 +24,7 @@ Simple wrapper that makes WireGuard easier to use with VPN providers.
 ## Prerequisites
 VPN providers who are offering WireGuard support. **NOTE** that as of right now, these providers **must** offer a configuration script following the original template written by Jason A. Donenfeld. To my knowledge the current VPN providers doing this are:
 * [Mullvad](https://mullvad.net/)
-* [Azire](https://www.azirevpn.com/)
+* [AzireVPN](https://www.azirevpn.com/)
 
 ```
 sudo add-apt-repository ppa:wireguard/wireguard && sudo apt-get update;
@@ -115,7 +115,7 @@ Yes. However I choose to implement a more general solution.
 
 ## More information
 * [Running WireGuard with Mullvad on Linux](https://mullvad.net/en/guides/wireguard-and-mullvad-vpn) - Mullvad's official guide.
-* [Running WireGuard with Azire on Linux](https://www.azirevpn.com/support/guides/computer/linux/wireguard-cli) - Azire VPN's official guide.
+* [Running WirMullvad-eGuard with AzireVPN on Linux](https://www.azirevpn.com/support/guides/computer/linux/wireguard-cli) - AzireVPN's official guide.
 * [WireGuard](https://www.wireguard.com/) - Official WireGuard website.
 
 ## Authors
