@@ -74,7 +74,7 @@ settings() {
 }
 
 install() {
-    echo -e "\nFetching wvpn's configuration script"
+    echo -e "\nFetching configuration script"
     curl -sL "${PROVIDER}" -o wvpn-wg.sh
     chmod +x ./wvpn-wg.sh
     cp ./wvpn ${DEST}
