@@ -1,10 +1,11 @@
 #!/bin/bash
 
-TARGET_HOME=$(eval echo ~"$SUDO_USER")
 TARGET_USER=$SUDO_USER
-SERVER_LIST="${TARGET_HOME}/.config/wvpn/wvpn_servers"
-DEFAULT_SERVER="${TARGET_HOME}/.config/wvpn/default_server"
-DEFAULT_PROVIDER="${TARGET_HOME}/.config/wvpn/default_provider"
+TARGET_HOME=$(eval echo ~"$SUDO_USER")
+CONFIG_ROOT="${TARGET_HOME}.config/wvpn"
+SERVER_LIST="${CONFIG_ROOT}/servers"
+DEFAULT_SERVER="${CONFIG_ROOT}/default_server"
+DEFAULT_PROVIDER="${CONFIG_ROOT}/provider"
 
 check_root() {
     if [[ ! $UID == 0 ]]; then
@@ -18,11 +19,11 @@ settings() {
         echo -en "Choose installation directory (default = /usr/local/bin/):\n> "
         read -r ANS
         if [[ ${ANS} =~ ^.+$ ]]; then
-           DEST=${ANS}
+           CMD_ROOT=${ANS}
         else
-           DEST="/usr/local/bin/"
+           CMD_ROOT="/usr/local/bin/"
         fi
-        echo -n "Install to ${DEST}? [Y/n] "
+        echo -n "Install to ${CMD_ROOT}? [Y/n] "
         read -r ANS
         [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break;
     done
@@ -76,11 +77,6 @@ settings() {
 install() {
     echo -e "\nFetching configuration script"
     curl -sL "${PROVIDER}" -o wvpn-wg.sh
-    chmod +x ./wvpn-wg.sh
-    cp ./wvpn ${DEST}
-    cp ./completion/wvpn /usr/share/bash-completion/completions/
-    mkdir -p "${TARGET_HOME}/.config/wvpn"
-    echo "${PROVIDER}" > "${DEFAULT_PROVIDER}"
 
     #Injecting server list construction
     LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
@@ -88,7 +84,7 @@ install() {
     sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
 
     #Injecting IP version control
-    ADDRESS_SETTING='$ADDRESS'
+    [[ $IP == 1 ]] && ADDRESS_SETTING='$ADDRESS'         #Both
     [[ $IP == 2 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
     [[ $IP == 3 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
     REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
@@ -98,12 +94,27 @@ install() {
     REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
     sed -i "$REGEX" ./wvpn-wg.sh
 
+    chmod +x ./wvpn-wg.sh
     $(bash ./wvpn-wg.sh) &>/dev/null
+
+    if [[ $KS_YES ]]; then
+        PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark \$(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
+        PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
+        PreDown=${PostUp//-I/-D}
+        PreDown=${PreDown//PostUp/PreDown}
+        echo -e "\nTurning on kill-switch for servers\n"
+        for file in /etc/wireguard/wvpn*.conf; do
+            sed -i "4a $PostUp\n$PreDown" "$file"
+        done
+    fi
+
+    mkdir -p "${CONFIG_ROOT}"
+    echo "${PROVIDER}" > "${DEFAULT_PROVIDER}"
     sort --version-sort ./wvpn_servers.tmp > "${SERVER_LIST}"
+
     cat "${SERVER_LIST}"
+    echo -e "\nFrom the above list, please select a default server:"
     AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "${SERVER_LIST}")
-    echo
-    echo "From the above list, please select a default server:"
     PS3="> "
     select opt in $AVAILABLE_SERVERS
     do
@@ -112,18 +123,9 @@ install() {
         break
     done
 
-    if [[ $KS_YES ]]; then
-        PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark \$(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
-        PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
-        PreDown=${PostUp//-I/-D}
-        PreDown=${PreDown//PostUp/PreDown}
-        echo -e "\nTurning on kill-switch for servers\n"
-        for file in $(ls -d /etc/wireguard/*); do
-            sed -i "4a $PostUp\n$PreDown" "$file"
-        done
-    fi
-
-    chown -R "${TARGET_USER}": "${TARGET_HOME}/.config/wvpn"
+    chown -R "${TARGET_USER}": "${CONFIG_ROOT}"
+    cp ./wvpn ${CMD_ROOT}
+    cp ./completion/wvpn /usr/share/bash-completion/completions/
     rm ./wvpn_servers.tmp ./wvpn-wg.sh
     echo "Installed! Please wait up to 60 seconds for your public key to be added to the servers."
     exit 0
@@ -131,10 +133,10 @@ install() {
 
 uninstall() {
     echo "Removing files..."
-    rm /usr/local/bin/wvpn 2>/dev/null
-    rm /usr/share/bash-completion/completions/wvpn 2>/dev/null
-    rm -r "$TARGET_HOME"/.config/wvpn 2>/dev/null
-    rm /etc/wireguard/wvpn*.conf 2>/dev/null
+    rm "${CMD_ROOT}/wvpn" 2>/dev/null
+    rm "/usr/share/bash-completion/completions/wvpn" 2>/dev/null
+    rm -r "${CONFIG_ROOT}" 2>/dev/null
+    rm "/etc/wireguard/wvpn*.conf" 2>/dev/null
     echo "Removed"
     exit 0
 }
