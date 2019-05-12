@@ -1,2 +1,2 @@
 #!/bin/bash
-git clone https://gitlab.com/adihrustic/Mullvad-WireGuard-Wrapper.git
+git clone https://gitlab.com/adihrustic/WireGuard-Wrapper.git
