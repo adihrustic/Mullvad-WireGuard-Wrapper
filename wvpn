@@ -1,0 +1,287 @@
+#!/bin/bash
+#script that makes it easier to use WireGuard with wvpn
+RED='\033[1;31m'   # Red color
+GREEN='\033[0;32m' # Green color"
+NC='\033[0m'       # No Color
+
+#Error function
+error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+startup() {
+    local TARGET_SERVER OPTION START_UP ENABLED
+    OPTION=$1
+    TARGET_SERVER=$2
+    #Checks to see if we already have a start-up server enabled
+    #If so, ENABLED will be set to 'enabled' and break the loop
+    for START_UP in ${AVAILABLE_SERVERS}; do
+        ENABLED=$(systemctl is-enabled wg-quick@wvpn-"$START_UP")
+        [[ $ENABLED == enabled ]] && break
+    done
+
+    if [[ $OPTION == "on" ]]; then
+        [[ $ENABLED != enabled ]] || error "Start-up server already set to: $START_UP"
+        sudo systemctl enable wg-quick@wvpn-"$TARGET_SERVER" &>/dev/null
+
+    elif [[ $OPTION == "off" ]]; then
+        [[ $ENABLED == enabled ]] || error "No start-up server is set."
+        sudo systemctl disable wg-quick@wvpn-"$START_UP" &>/dev/null
+
+    elif [[ $OPTION == "show" ]]; then
+        [[ $ENABLED == enabled ]] || START_UP=EMPTY
+        echo -e "${GREEN}Current start-up is set to: ${START_UP}${NC}"
+        exit 0
+
+    else
+        error "Bad input."
+    fi
+    echo -e "${GREEN}Done! Changes will apply on next reboot.${NC}"
+}
+
+verify_connection() {
+    local TARGET_SERVER
+    echo "# Verifying connection #"
+    DEFAULT_PROVIDER="$HOME/.config/wvpn/default_provider"
+
+    if (grep -q mullvad "${DEFAULT_PROVIDER}"); then
+        TARGET_SERVER=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
+    elif (grep -q azire "${DEFAULT_PROVIDER}"); then
+        TARGET_SERVER=$(curl -s https://api.azirevpn.com/v1/check | jq -r .location)
+    else
+       error "NOT able to verify!"
+    fi
+
+    [[ "${TARGET_SERVER//-*/}" == "${CURRENT_CONNECTION//*-/}" ]] || error "NOT able to verify!"
+    echo -e "${GREEN}Connection verified!${NC}"
+}
+
+update_default() {
+    local TARGET_SERVER
+    TARGET_SERVER=$1
+    echo "# Updating default server #"
+
+    if [[ -z "$TARGET_SERVER" ]]; then
+        echo -n "Please select the name of your default server (e.g. se1): "
+        while :; do
+            read -r TARGET_SERVER
+            [[ ! $TARGET_SERVER =~ ^$ ]] && break
+            echo -en "\nInvalid input, please try again: "
+        done
+    fi
+
+    grep -q "$TARGET_SERVER" <<< "$AVAILABLE_SERVERS" || error "Invalid server, aborting."
+    echo "$TARGET_SERVER" > "$HOME"/.config/wvpn/default_server
+    DEFAULT_SERVER=$TARGET_SERVER
+    echo -e "${GREEN}Default set to $TARGET_SERVER!${NC}"
+}
+
+server_change() {
+    local ANS
+    echo -e "${RED}Error: you're currently connected to ${CURRENT_CONNECTION//*-/}.${NC}"
+    echo -n "Do you wish to change to ${TARGET_SERVER//*-/}? [Y/n] "
+    while :; do
+        read -r ANS
+        [[ $ANS =~ ^(y|Y|^$)$ ]] && $0 disconnect &>/dev/null && break
+        [[ $ANS =~ ^(n|N)$ ]] && error "aborted."
+        echo -n "Invalid input, please try again [Y/n] "
+    done
+    echo -e "# Reconnecting #"
+}
+
+kill_switch_verify() {
+    local ANS
+    echo -n "You are trying to change the kill-switch value of a server you're currently connected to. "
+    echo "This requires disconnecting from the server before proceeding."
+    echo
+    echo -n "Do you wish to continue? [Y/n] "
+    while :; do
+        read -r ANS
+        [[ $ANS =~ ^(y|Y|^$)$ ]] && KS_YES=true && break
+        [[ $ANS =~ ^(n|N)$ ]] && break
+        echo -n "Invalid input, please try again [Y/n] "
+    done
+}
+
+kill_switch() {
+    local PostUp PreDown
+    PostUp="iptables -I OUTPUT ! -o %i -m mark ! --mark \$(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
+    PostUp=${PostUp/*/"PostUp = $PostUp && ${PostUp//ip/ip6}"}
+    PreDown=${PostUp//-I/-D}
+    PreDown=${PreDown//PostUp/PreDown}
+    echo -e "# Turning $1 kill-switch #"
+    #If all servers were specified, we change to this value
+    [[ $2 == all ]] && set "$1" "$AVAILABLE_SERVERS"
+    for ARG in ${2}; do
+        #Check if valid syntax
+        [[ ! $ARG =~ ^([a-z]{2}[0-9]{1,2})$ ]] && echo -e "${RED}Error: invalid input $ARG.${NC}" && continue
+
+        #Security check, see kill_switch_verify function above
+        if [[ "${CURRENT_CONNECTION//*-/}" == "$ARG" ]]; then
+            kill_switch_verify
+            [[ $KS_YES ]] || continue
+            "$0" disconnect &>/dev/null
+        fi
+
+        if grep -q "$ARG" <<<"$AVAILABLE_SERVERS"; then
+            #always remove the kill-switch
+            sourceFile="/etc/wireguard/wvpn-$ARG.conf"
+            umask 077
+            sudo awk '!/REJECT/' "$sourceFile" &>"/tmp/$ARG.tmp"
+            sudo mv "/tmp/$ARG.tmp" "$sourceFile"
+            sudo chown root: "$sourceFile"
+
+            #If cmd happens to be "on", just add the kill-switch back
+            [[ "$1" == "on" ]] && sudo sed -i "4a $PostUp\n$PreDown" "$sourceFile"
+        else
+            echo -e "${RED}Error: $ARG is not a valid server.${NC}"
+        fi
+    done
+
+    [[ ! $KS_YES ]] && echo -e "${GREEN}Done.${NC}" && exit 1
+    #Enables and verifies connection again (optional), see above
+    echo "# Reconnecting #"
+    "$0" connect "${CURRENT_CONNECTION//*-/}" &>/dev/null && "$0" verify
+}
+
+COMMAND=$1
+DEFAULT_SERVER=$(cat "$HOME"/.config/wvpn/default_server 2>/dev/null)
+CURRENT_CONNECTION=$(wg show interfaces)
+AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "$HOME"/.config/wvpn/wvpn_servers 2>/dev/null)
+
+case $COMMAND in
+connect)
+    #Default server check
+    [[ -z "$DEFAULT_SERVER" ]] && echo -e "${RED}Error: Default server needs to be set.${NC}" && update_default
+    TARGET_SERVER=wvpn-${2:-$DEFAULT_SERVER}
+
+    echo "# Connecting to ${TARGET_SERVER//*-/} #"
+    [[ $CURRENT_CONNECTION != "$TARGET_SERVER" ]] || error "already connected to ${TARGET_SERVER//*-/}."
+    [[ ! $CURRENT_CONNECTION ]] || server_change
+    sudo wg-quick up "$TARGET_SERVER" &>/dev/null || error "server does not exist, disconnecting."
+    echo -e "${GREEN}Connected!${NC}"
+
+    #Verifies connection, always done
+    CURRENT_CONNECTION=$TARGET_SERVER
+    verify_connection
+    ;;
+
+disconnect)
+    echo "# Disconnecting VPN #"
+    sudo wg-quick down "$CURRENT_CONNECTION" &>/dev/null || error "not connected."
+    echo -e "${GREEN}Disconnected${NC}"
+    ;;
+
+kill-switch)
+    TARGET_SERVER=${3:-$DEFAULT_SERVER}
+    [[ $2 =~ on|off ]] || error "Invalid choice, aborting."
+    kill_switch "$2" "$TARGET_SERVER"
+    ;;
+
+list | ls | l)
+    #Option to view current default server
+    if [[ $2 == default ]]; then
+        echo -e "${GREEN}Default server is set to: ${DEFAULT_SERVER:-"None"}${NC}"
+        exit 0
+    fi
+    echo "# Available servers #"
+    echo "---------------------"
+    echo -e "$(cat "$HOME"/.config/wvpn/wvpn_servers)" || error "no server list found. Try updating."
+    ;;
+
+start-up)
+    TARGET_SERVER=${3:-$DEFAULT_SERVER}
+    grep -q "$TARGET_SERVER" <<< "$AVAILABLE_SERVERS" || error "Invalid server, aborting."
+    startup "$2" "$TARGET_SERVER"
+    ;;
+
+status)
+    [[ $CURRENT_CONNECTION ]] || error "not connected."
+    sudo wg
+    ;;
+
+update)
+    if [[ $2 == "default" ]]; then
+        update_default "$3"
+
+    elif [[ $2 == "servers" ]]; then
+        [[ $UID == 0 ]] || error "this command must be run as root."
+
+        TARGET_HOME=$(eval echo ~"$SUDO_USER")
+        TARGET_USER=$SUDO_USER
+        SERVER_LIST="${TARGET_HOME}/.config/wvpn/wvpn_servers"
+        DEFAULT_PROVIDER=$(cat "${TARGET_HOME}"/.config/wvpn/default_provider 2>/dev/null)
+        [[ "${DEFAULT_PROVIDER}" ]] || error "No default provider found."
+
+        echo -e "Choose whether to use IPv4, IPv6 or both: "
+        PS3="> "
+        options=("Both (default)" "IPv4" "IPv6")
+        select opt in "${options[@]}"
+        do
+            [[ ${REPLY} == 1 ]] && IP=1
+            [[ ${REPLY} == 2 ]] && IP=2
+            [[ ${REPLY} == 3 ]] && IP=3
+            [[ ${IP} ]] && break
+        done
+
+        echo "# Fetching server list #"
+        curl -sL "${DEFAULT_PROVIDER}" -o wvpn-wg.sh
+        chmod +x ./wvpn-wg.sh
+        #Injecting server list construction
+        LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
+        SERVER="\\\techo \"\$CODE:\t\${SERVER_LOCATIONS[\"\$CODE\"]}\" >> ./wvpn_servers.tmp"
+        sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
+
+        #Injecting IP version control
+        ADDRESS_SETTING='$ADDRESS'
+        [[ $IP == 2 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
+        [[ $IP == 3 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
+        REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
+        sed -i "$REGEX" ./wvpn-wg.sh
+
+        #Injecting config file renaming
+        REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
+        sed -i "$REGEX" ./wvpn-wg.sh
+
+        $(bash ./wvpn-wg.sh) &>/dev/null
+        sort --version-sort ./wvpn_servers.tmp > "${SERVER_LIST}"
+
+        chown -R "${TARGET_USER}": "${TARGET_HOME}/.config/wvpn"
+        rm ./wvpn_servers.tmp ./wvpn-wg.sh
+        echo "# Available servers #"
+        echo "---------------------"
+        echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/wvpn_servers)"
+    else
+        error "unknown command, use '$(basename "$0") help' for help."
+    fi
+    ;;
+
+verify)
+    [[ $CURRENT_CONNECTION ]] || error "not connected."
+    verify_connection
+    ;;
+
+help | -h)
+    echo "Usage: $(basename "$0") <cmd> <server>" >&2
+    echo
+    echo -e "  connect \t\t\t Connects to the default server."
+    echo -e "  connect <server>\t\t Connects to a specified servers."
+    echo -e "  disconnect\t\t\t Disconnects from the active server."
+    echo -e "  kill-switch <on|off> <server>\t Changes the kill-switch value of specified server(s)."
+    echo -e "  list <default>\t\t List available servers, or the default server."
+    echo -e "  status\t\t\t Show current status of connection."
+    echo -e "  start-up <on|off> <server>\t Configures active server on system start-up."
+    echo -e "  update default <server>\t Sets a new default server."
+    echo -e "  update servers\t\t Updates the server list."
+    echo -e "  verify\t\t\t Verify your connection."
+    echo
+    echo -e "  help\t\t\t\t Brings up this help menu."
+    echo
+    ;;
+
+*)
+    error "unknown command, use '$(basename "$0") help' for help."
+    ;;
+esac
+exit 0
