@@ -64,7 +64,6 @@ startup() {
 verify_connection() {
     local TARGET_SERVER
     echo "# Verifying connection #"
-    DEFAULT_PROVIDER="${HOME}/.config/wvpn/default_provider"
 
     if (grep -q mullvad "${DEFAULT_PROVIDER}"); then
         TARGET_SERVER=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
@@ -169,7 +168,8 @@ kill_switch() {
 COMMAND=$1
 DEFAULT_SERVER=$(cat "${HOME}"/.config/wvpn/default_server 2>/dev/null)
 CURRENT_CONNECTION=$(wg show interfaces)
-AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "${HOME}"/.config/wvpn/wvpn_servers 2>/dev/null)
+AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "${HOME}"/.config/wvpn/servers 2>/dev/null)
+DEFAULT_PROVIDER="${HOME}/.config/wvpn/provider"
 
 case ${COMMAND} in
 connect)
@@ -208,7 +208,7 @@ list | ls | l)
     fi
     echo "# Available servers #"
     echo "---------------------"
-    echo -e "$(cat "${HOME}"/.config/wvpn/wvpn_servers)" || error "no server list found. Try updating."
+    echo -e "$(cat "${HOME}"/.config/wvpn/servers)" || error "no server list found. Try updating."
     ;;
 
 start-up)
@@ -231,9 +231,8 @@ update)
 
         TARGET_HOME=$(eval echo ~"${SUDO_USER}")
         TARGET_USER=${SUDO_USER}
-        SERVER_LIST="${TARGET_HOME}/.config/wvpn/wvpn_servers"
-        DEFAULT_PROVIDER=$(cat "${TARGET_HOME}"/.config/wvpn/default_provider 2>/dev/null)
-        [[ "${DEFAULT_PROVIDER}" ]] || error "No default provider found."
+        SERVER_LIST="${TARGET_HOME}/.config/wvpn/servers"
+        [[ -f "${DEFAULT_PROVIDER}" ]] || error "No default provider found."
 
         echo -e "Choose whether to use IPv4, IPv6 or both: "
         PS3="> "
@@ -247,11 +246,11 @@ update)
         done
 
         echo "# Fetching server list #"
-        curl -sL "${DEFAULT_PROVIDER}" -o wvpn-wg.sh
+        curl -sL "$(cat "${DEFAULT_PROVIDER}")" -o wvpn-wg.sh
         chmod +x ./wvpn-wg.sh
         #Injecting server list construction
         LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
-        SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./wvpn_servers.tmp"
+        SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./servers.tmp"
         sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
 
         #Injecting IP version control
@@ -266,13 +265,13 @@ update)
         sed -i "${REGEX}" ./wvpn-wg.sh
 
         $(bash ./wvpn-wg.sh) &>/dev/null
-        sort --version-sort ./wvpn_servers.tmp > "${SERVER_LIST}"
+        sort --version-sort ./servers.tmp > "${SERVER_LIST}"
 
         chown -R "${TARGET_USER}": "${TARGET_HOME}/.config/wvpn"
-        rm ./wvpn_servers.tmp ./wvpn-wg.sh
+        rm ./servers.tmp ./wvpn-wg.sh
         echo "# Available servers #"
         echo "---------------------"
-        echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/wvpn_servers)"
+        echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/servers)"
     else
         help
     fi

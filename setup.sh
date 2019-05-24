@@ -2,7 +2,7 @@
 
 TARGET_USER=$SUDO_USER
 TARGET_HOME=$(eval echo ~"$SUDO_USER")
-CONFIG_ROOT="${TARGET_HOME}.config/wvpn"
+CONFIG_ROOT="${TARGET_HOME}/.config/wvpn"
 SERVER_LIST="${CONFIG_ROOT}/servers"
 DEFAULT_SERVER="${CONFIG_ROOT}/default_server"
 DEFAULT_PROVIDER="${CONFIG_ROOT}/provider"
@@ -80,7 +80,7 @@ install() {
 
     #Injecting server list construction
     LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
-    SERVER="\\\techo \"\$CODE:\t\${SERVER_LOCATIONS[\"\$CODE\"]}\" >> ./wvpn_servers.tmp"
+    SERVER="\\\techo \"\$CODE:\t\${SERVER_LOCATIONS[\"\$CODE\"]}\" >> ./servers.tmp"
     sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
 
     #Injecting IP version control
@@ -110,7 +110,7 @@ install() {
 
     mkdir -p "${CONFIG_ROOT}"
     echo "${PROVIDER}" > "${DEFAULT_PROVIDER}"
-    sort --version-sort ./wvpn_servers.tmp > "${SERVER_LIST}"
+    sort --version-sort ./servers.tmp > "${SERVER_LIST}"
 
     cat "${SERVER_LIST}"
     echo -e "\nFrom the above list, please select a default server:"
@@ -126,7 +126,7 @@ install() {
     chown -R "${TARGET_USER}": "${CONFIG_ROOT}"
     cp ./wvpn ${CMD_ROOT}
     cp ./completion/wvpn /usr/share/bash-completion/completions/
-    rm ./wvpn_servers.tmp ./wvpn-wg.sh
+    rm ./servers.tmp ./wvpn-wg.sh
     echo "Installed! Please wait up to 60 seconds for your public key to be added to the servers."
     exit 0
 }
