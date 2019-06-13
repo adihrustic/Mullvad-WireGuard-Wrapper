@@ -8,18 +8,18 @@ help() {
 cat <<-'EOF'
 Usage: wvpn <cmd> <server>
 
-connect                         Connects to the default server.
-connect <server>                Connects to a specified servers.
-disconnect                      Disconnects from the active server.
-kill-switch <on|off> <server>   Changes the kill-switch value of specified server(s).
-list <default>                  List available servers, or the default server.
-status                          Show current status of connection.
-start-up <on|off> <server>      Configures active server on system start-up.
-update default <server>         Sets a new default server.
-update servers                  Updates the server list.
-verify                          Verify your connection.
+    connect                         Connects to the default server.
+    connect <server>                Connects to a specified servers.
+    disconnect                      Disconnects from the active server.
+    kill-switch <on|off> <server>   Changes the kill-switch value of specified server(s).
+    list <default>                  List available servers, or the default server.
+    status                          Show current status of connection.
+    start-up <on|off> <server>      Configures active server on system start-up.
+    update default <server>         Sets a new default server.
+    update servers                  Updates the server list.
+    verify                          Verify your connection.
 
-help                            Brings up this help menu.
+    help                            Brings up this help menu.
 EOF
 exit 0
 }
@@ -168,7 +168,7 @@ kill_switch() {
 COMMAND=$1
 DEFAULT_SERVER=$(cat "${HOME}"/.config/wvpn/default_server 2>/dev/null)
 CURRENT_CONNECTION=$(wg show interfaces)
-AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "${HOME}"/.config/wvpn/servers 2>/dev/null)
+AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${HOME}"/.config/wvpn/servers 2>/dev/null)
 DEFAULT_PROVIDER="${HOME}/.config/wvpn/provider"
 
 case ${COMMAND} in
@@ -232,6 +232,7 @@ update)
         TARGET_HOME=$(eval echo ~"${SUDO_USER}")
         TARGET_USER=${SUDO_USER}
         SERVER_LIST="${TARGET_HOME}/.config/wvpn/servers"
+        DEFAULT_PROVIDER="${TARGET_HOME}/.config/wvpn/provider"
         [[ -f "${DEFAULT_PROVIDER}" ]] || error "No default provider found."
 
         echo -e "Choose whether to use IPv4, IPv6 or both: "
@@ -269,6 +270,7 @@ update)
 
         chown -R "${TARGET_USER}": "${TARGET_HOME}/.config/wvpn"
         rm ./servers.tmp ./wvpn-wg.sh
+        echo
         echo "# Available servers #"
         echo "---------------------"
         echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/servers)"

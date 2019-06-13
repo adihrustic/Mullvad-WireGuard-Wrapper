@@ -103,7 +103,7 @@ install() {
         PreDown=${PostUp//-I/-D}
         PreDown=${PreDown//PostUp/PreDown}
         echo -e "\nTurning on kill-switch for servers\n"
-        for file in /etc/wireguard/wvpn*.conf; do
+        for file in /etc/wireguard/wvpn*; do
             sed -i "4a $PostUp\n$PreDown" "$file"
         done
     fi
@@ -111,10 +111,10 @@ install() {
     mkdir -p "${CONFIG_ROOT}"
     echo "${PROVIDER}" > "${DEFAULT_PROVIDER}"
     sort --version-sort ./servers.tmp > "${SERVER_LIST}"
-
+    echo
     cat "${SERVER_LIST}"
     echo -e "\nFrom the above list, please select a default server:"
-    AVAILABLE_SERVERS=$(awk -F'[:]' '{print $1" "}' "${SERVER_LIST}")
+    AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${SERVER_LIST}")
     PS3="> "
     select opt in $AVAILABLE_SERVERS
     do
@@ -136,7 +136,9 @@ uninstall() {
     rm "${CMD_ROOT}/wvpn" 2>/dev/null
     rm "/usr/share/bash-completion/completions/wvpn" 2>/dev/null
     rm -r "${CONFIG_ROOT}" 2>/dev/null
-    rm "/etc/wireguard/wvpn*.conf" 2>/dev/null
+    for file in /etc/wireguard/wvpn*; do
+        rm "$file" 2>/dev/null
+    done
     echo "Removed"
     exit 0
 }
