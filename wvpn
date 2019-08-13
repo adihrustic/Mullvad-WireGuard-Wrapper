@@ -63,11 +63,12 @@ startup() {
 
 verify_connection() {
     local TARGET_SERVER
+    PROVIDER=$(awk -F'=' '/PROVIDER/ {print $2}' "${HOME}"/.config/wvpn/defaults 2>/dev/null)
     echo "# Verifying connection #"
 
-    if (grep -q mullvad "${DEFAULT_PROVIDER}"); then
+    if grep -q mullvad <<< "${PROVIDER}"; then
         TARGET_SERVER=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
-    elif (grep -q azire "${DEFAULT_PROVIDER}"); then
+    elif grep -q azire <<< "${PROVIDER}"; then
         TARGET_SERVER=$(curl -s https://api.azirevpn.com/v1/check | jq -r .location)
     else
        error "NOT able to verify!"
@@ -166,10 +167,9 @@ kill_switch() {
 }
 
 COMMAND=$1
-DEFAULT_SERVER=$(cat "${HOME}"/.config/wvpn/default_server 2>/dev/null)
 CURRENT_CONNECTION=$(wg show interfaces)
 AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${HOME}"/.config/wvpn/servers 2>/dev/null)
-DEFAULT_PROVIDER="${HOME}/.config/wvpn/provider"
+DEFAULT_SERVER=$(awk -F'=' '/DEFAULT_SERVER/ {print $2}' "${HOME}"/.config/wvpn/defaults 2>/dev/null)
 
 case ${COMMAND} in
 connect)
@@ -230,25 +230,14 @@ update)
         [[ ${UID} == 0 ]] || error "this command must be run as root."
 
         TARGET_HOME=$(eval echo ~"${SUDO_USER}")
-        TARGET_USER=${SUDO_USER}
         SERVER_LIST="${TARGET_HOME}/.config/wvpn/servers"
-        DEFAULT_PROVIDER="${TARGET_HOME}/.config/wvpn/provider"
-        [[ -f "${DEFAULT_PROVIDER}" ]] || error "No default provider found."
+        DEFAULTS="${TARGET_HOME}/.config/wvpn/defaults"
+        read -r PROVIDER IP DNS <<< "$(awk -F'=' 'BEGIN {ORS=" "} NR>=2 {print $2}' ${DEFAULTS} 2>/dev/null)"
+        [[ ${PROVIDER} ]] || error "No default provider found."
 
-        echo -e "Choose whether to use IPv4, IPv6 or both: "
-        PS3="> "
-        options=("Both (default)" "IPv4" "IPv6")
-        select opt in "${options[@]}"
-        do
-            [[ ${REPLY} == 1 ]] && IP=1
-            [[ ${REPLY} == 2 ]] && IP=2
-            [[ ${REPLY} == 3 ]] && IP=3
-            [[ ${IP} ]] && break
-        done
+        echo "# Connecting to provider #"
+        curl -sL "${PROVIDER}" -o wvpn-wg.sh
 
-        echo "# Fetching server list #"
-        curl -sL "$(cat "${DEFAULT_PROVIDER}")" -o wvpn-wg.sh
-        chmod +x ./wvpn-wg.sh
         #Injecting server list construction
         LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
         SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./servers.tmp"
@@ -256,24 +245,39 @@ update)
 
         #Injecting IP version control
         ADDRESS_SETTING='${ADDRESS}'
-        [[ ${IP} == 2 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
-        [[ ${IP} == 3 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
+        [[ ${IP} -eq 4 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
+        [[ ${IP} -eq 6 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
         REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
         sed -i "${REGEX}" ./wvpn-wg.sh
 
         #Injecting config file renaming
-        REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\${CODE}.conf\)/\1wvpn\2/"
+        REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
         sed -i "${REGEX}" ./wvpn-wg.sh
 
         $(bash ./wvpn-wg.sh) &>/dev/null
+        [[ $? -ne 0 ]] || error "Installation failed."
+
+        #Injecting DNS
+        if [[ ${DNS} ]]; then
+            for file in /etc/wireguard/wvpn*; do
+                LINE=$(sed -n '/DNS/=' "$file")
+                if [[ $LINE ]]; then
+                    sed -i "s/DNS =.*/DNS = ${DNS}/g" "$file"
+                else
+                    sed -i "${LINE}i DNS = ${DNS}" "$file"
+                fi
+            done
+        fi
+
         sort --version-sort ./servers.tmp > "${SERVER_LIST}"
 
-        chown -R "${TARGET_USER}": "${TARGET_HOME}/.config/wvpn"
+        chown -R "${SUDO_USER}": "${TARGET_HOME}/.config/wvpn"
         rm ./servers.tmp ./wvpn-wg.sh
-        echo
-        echo "# Available servers #"
+        echo -e "\n\n# Available servers #"
         echo "---------------------"
         echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/servers)"
+        echo -e "\nInstalled! Please wait up to 60 seconds for your public key to be added to the servers."
+        echo "NOTE: Kill switch has been removed!"
     else
         help
     fi
