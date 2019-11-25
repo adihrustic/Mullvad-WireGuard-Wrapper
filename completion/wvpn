@@ -1,51 +1,49 @@
-_wvpn()
-{
+_wvpn() {
     local cur prev opts servers
     cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    prev="${COMP_WORDS[COMP_CWORD - 1]}"
     opts="connect disconnect status list update kill-switch start-up help verify"
-    servers=$(egrep -o "^[^:]+" $HOME/.config/wvpn/default_servers 2>/dev/null)
-
+    servers=$(egrep -o "^[^:]+" $HOME/.config/wvpn/servers 2>/dev/null)
 
     case "${prev}" in
-        $(basename "$1"))
-            COMPREPLY=( $(compgen -W "${opts}" "${cur}") )
-            return 0
-            ;;
-        connect)
-            COMPREPLY=( $(compgen -W "${servers}" "${cur}") )
-            return 0
-            ;;
-        update)
-            COMPREPLY=( $(compgen -W "servers default" "${cur}") )
-            return 0
-            ;;
-        kill-switch)
-            COMPREPLY=( $(compgen -W "on off" "${cur}") )
-            return 0
-            ;;
-        list|ls|l)
-            COMPREPLY=( $(compgen -W "default" "${cur}") )
-            return 0
-            ;;
-        start-up)
-            COMPREPLY=( $(compgen -W "on off show" "${cur}") )
-            return 0
-            ;;
-        on|off)
-            if [ "${COMP_WORDS[COMP_CWORD-2]}" == kill-switch ]; then
-                COMPREPLY=( $(compgen -W "all ${servers}" "${cur}") )
-            elif [ "${COMP_WORDS[COMP_CWORD-2]}" == start-up ]; then
-                COMPREPLY=( $(compgen -W "${servers}" "${cur}") )
-            fi
-            return 0
-            ;;
-        $(grep -o "${prev}" <<< $servers))
-            COMPREPLY=( $(compgen -W "${servers}" "${cur}") )
-            return 0
-            ;;
-        *)
+    $(basename "$1"))
+        COMPREPLY=($(compgen -W "${opts}" "${cur}"))
+        return 0
         ;;
+    connect)
+        COMPREPLY=($(compgen -W "${servers}" "${cur}"))
+        return 0
+        ;;
+    update)
+        COMPREPLY=($(compgen -W "servers default" "${cur}"))
+        return 0
+        ;;
+    kill-switch)
+        COMPREPLY=($(compgen -W "on off" "${cur}"))
+        return 0
+        ;;
+    list | ls | l)
+        COMPREPLY=($(compgen -W "default" "${cur}"))
+        return 0
+        ;;
+    start-up)
+        COMPREPLY=($(compgen -W "on off show" "${cur}"))
+        return 0
+        ;;
+    on | off)
+        if [ "${COMP_WORDS[COMP_CWORD - 2]}" == kill-switch ]; then
+            COMPREPLY=($(compgen -W "all ${servers}" "${cur}"))
+        elif [ "${COMP_WORDS[COMP_CWORD - 2]}" == start-up ]; then
+            COMPREPLY=($(compgen -W "${servers}" "${cur}"))
+        fi
+        return 0
+        ;;
+    $(grep -o "${prev}" <<<$servers))
+        COMPREPLY=($(compgen -W "${servers}" "${cur}"))
+        return 0
+        ;;
+    *) ;;
+
     esac
 }
 

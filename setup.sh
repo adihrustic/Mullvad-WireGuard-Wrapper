@@ -16,21 +16,20 @@ settings() {
         echo -en "Choose installation directory (default = /usr/local/bin/):\n> "
         read -r ANS
         if [[ ${ANS} =~ ^.+$ ]]; then
-           CMD_ROOT=${ANS}
+            CMD_ROOT=${ANS}
 
         else
-           CMD_ROOT="/usr/local/bin/"
+            CMD_ROOT="/usr/local/bin/"
         fi
         echo -n "Install to ${CMD_ROOT}? [Y/n] "
         read -r ANS
-        [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break;
+        [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break
     done
 
     echo -e "\nChoose your provider: "
     PS3="> "
     options=("Azire" "Mullvad" "Other")
-    select opt in "${options[@]}"
-    do
+    select opt in "${options[@]}"; do
         if [[ ${REPLY} == 1 ]]; then
             PROVIDER="https://www.azirevpn.com/dl/azirevpn-wg.sh"
 
@@ -45,7 +44,7 @@ settings() {
                 PROVIDER=${ANS}
                 echo -n "Download from ${PROVIDER}? [Y/n] "
                 read -r ANS
-                [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break;
+                [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break
             done
         fi
         [[ ${PROVIDER} ]] && break
@@ -54,8 +53,7 @@ settings() {
     echo -e "\nChoose whether to use IPv4, IPv6 or both: "
     PS3="> "
     options=("Both (default)" "IPv4" "IPv6")
-    select opt in "${options[@]}"
-    do
+    select opt in "${options[@]}"; do
         [[ ${REPLY} == 1 ]] && IP="B"
         [[ ${REPLY} == 2 ]] && IP=4
         [[ ${REPLY} == 3 ]] && IP=6
@@ -70,7 +68,7 @@ settings() {
             DNS="1.1.1.1"
 
         elif [[ ${ANS} =~ ^(N|n)$ ]]; then
-            echo "No DNS will be set"
+            echo "No DNS will be set (or changed)."
 
         elif [[ ${ANS} =~ ^o$ ]]; then
             while :; do
@@ -80,7 +78,7 @@ settings() {
                 DNS=${ANS}
                 echo -n "Set ${DNS} as DNS? [Y/n] "
                 read -r ANS
-                [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break;
+                [[ ${ANS} =~ ^(Y|y|^$)$ ]] && break
             done
 
         else
@@ -147,18 +145,17 @@ install() {
     fi
     #Setting defaults
     mkdir -p "${CONFIG_ROOT}"
-    sort --version-sort ./servers.tmp > "${SERVER_LIST}"
+    sort --version-sort ./servers.tmp >"${SERVER_LIST}"
     cat "${SERVER_LIST}"
     echo -e "\nFrom the above list, please select a default server:"
     AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${SERVER_LIST}")
     PS3="> "
-    select opt in $AVAILABLE_SERVERS
-    do
+    select opt in $AVAILABLE_SERVERS; do
         [[ $REPLY ]] || continue
-        echo "DEFAULT_SERVER=${opt}" > "${DEFAULTS}"
+        echo "DEFAULT_SERVER=${opt}" >"${DEFAULTS}"
         break
     done
-    echo -e "PROVIDER=${PROVIDER}" "\nIP=${IP}" "\nDNS=${DNS}" >> "${DEFAULTS}"
+    echo -e "PROVIDER=${PROVIDER}" "\nIP=${IP}" "\nDNS=${DNS}" >>"${DEFAULTS}"
 
     chown -R "${SUDO_USER}": "${CONFIG_ROOT}"
     cp ./wvpn ${CMD_ROOT}
@@ -181,20 +178,20 @@ uninstall() {
 }
 
 case $1 in
-    install)
-        check_root
-        settings
-        install
-        ;;
-    uninstall)
-        check_root
-        uninstall
-        ;;
-    *)
-        echo "Usage: $(basename "$0") <cmd>"
-        echo
-        echo -e "install \t Begins the installation"
-        echo -e "uninstall \t Uninstalls and removes all files on the machine"
-        exit 0
-        ;;
+install)
+    check_root
+    settings
+    install
+    ;;
+uninstall)
+    check_root
+    uninstall
+    ;;
+*)
+    echo "Usage: $(basename "$0") <cmd>"
+    echo
+    echo -e "install \t Begins the installation"
+    echo -e "uninstall \t Uninstalls and removes all files on the machine"
+    exit 0
+    ;;
 esac

@@ -5,7 +5,7 @@ GREEN='\033[0;32m' # Green color"
 NC='\033[0m'       # No Color
 
 help() {
-cat <<-'EOF'
+    cat <<-'EOF'
 Usage: wvpn <cmd> <server>
 
     connect                         Connects to the default server.
@@ -21,7 +21,7 @@ Usage: wvpn <cmd> <server>
 
     help                            Brings up this help menu.
 EOF
-exit 0
+    exit 0
 }
 
 #Error function
@@ -30,6 +30,25 @@ error() {
     exit 1
 }
 
+load_settings() {
+    if [ "$(id -u)" -eq 0 ]; then HOME=$(eval echo ~"${SUDO_USER}"); fi
+
+    if [[ -f ${HOME}/.config/wvpn/defaults ]]; then
+        source "${HOME}/.config/wvpn/defaults"
+
+        #Default server check
+        if [[ -z "${DEFAULT_SERVER}" ]]; then
+            echo -e "${RED}Error: Default server needs to be set.${NC}"
+            update_default
+        fi
+    else
+        error "'defaults' file missing in .config directory. Reinstall to avoid further errors."
+    fi
+
+    CURRENT_CONNECTION=$(wg show interfaces)
+    SERVER_LIST="${HOME}/.config/wvpn/servers"
+    AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${SERVER_LIST}" 2>/dev/null)
+}
 
 startup() {
     local TARGET_SERVER OPTION START_UP ENABLED
@@ -63,15 +82,15 @@ startup() {
 
 verify_connection() {
     local TARGET_SERVER
-    PROVIDER=$(awk -F'=' '/PROVIDER/ {print $2}' "${HOME}"/.config/wvpn/defaults 2>/dev/null)
-    echo "# Verifying connection #"
+    [[ ${PROVIDER} ]] || error "No default provider set."
 
-    if grep -q mullvad <<< "${PROVIDER}"; then
+    echo "# Verifying connection #"
+    if grep -q mullvad <<<"${PROVIDER}"; then
         TARGET_SERVER=$(curl -s https://am.i.mullvad.net/json | jq -r .mullvad_exit_ip_hostname)
-    elif grep -q azire <<< "${PROVIDER}"; then
+    elif grep -q azire <<<"${PROVIDER}"; then
         TARGET_SERVER=$(curl -s https://api.azirevpn.com/v1/check | jq -r .location)
     else
-       error "NOT able to verify!"
+        error "NOT able to verify!"
     fi
 
     [[ "${TARGET_SERVER//-*/}" == "${CURRENT_CONNECTION//*-/}" ]] || error "NOT able to verify!"
@@ -92,9 +111,8 @@ update_default() {
         done
     fi
 
-    grep -q "${TARGET_SERVER}" <<< "${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
-    echo "${TARGET_SERVER}" > "${HOME}"/.config/wvpn/default_server
-    DEFAULT_SERVER=${TARGET_SERVER}
+    grep -q "${TARGET_SERVER}" <<<"${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
+    sed -i "s/\(DEFAULT_SERVER\).*/\1=${TARGET_SERVER}/" "${HOME}"/.config/wvpn/defaults
     echo -e "${GREEN}Default set to ${TARGET_SERVER}!${NC}"
 }
 
@@ -109,6 +127,7 @@ server_change() {
         echo -n "Invalid input, please try again [Y/n] "
     done
     echo -e "# Reconnecting #"
+    CURRENT_CONNECTION=${TARGET_SERVER}
 }
 
 kill_switch_verify() {
@@ -119,7 +138,7 @@ kill_switch_verify() {
     echo -n "Do you wish to continue? [Y/n] "
     while :; do
         read -r ANS
-        [[ ${ANS} =~ ^(y|Y|^$)$ ]] && KS_YES=true && break
+        [[ ${ANS} =~ ^(y|Y|^$)$ ]] && KILL_SWITCH=1 && break
         [[ ${ANS} =~ ^(n|N)$ ]] && break
         echo -n "Invalid input, please try again [Y/n] "
     done
@@ -141,7 +160,7 @@ kill_switch() {
         #Security check, see kill_switch_verify function above
         if [[ "${CURRENT_CONNECTION//*-/}" == "${ARG}" ]]; then
             kill_switch_verify
-            [[ ${KS_YES} ]] || continue
+            [[ ${KILL_SWITCH} ]] || continue
             "$0" disconnect &>/dev/null
         fi
 
@@ -160,140 +179,136 @@ kill_switch() {
         fi
     done
 
-    [[ ! ${KS_YES} ]] && echo -e "${GREEN}Done.${NC}" && exit 0
-    #Enables and verifies connection again (optional), see above
-    echo "# Reconnecting #"
-    "$0" connect "${CURRENT_CONNECTION//*-/}" &>/dev/null && "$0" verify
+    #Enables and verifies connection again, see above
+    if [[ ${KILL_SWITCH} ]]; then
+        echo "# Reconnecting #"
+        "$0" connect "${CURRENT_CONNECTION//*-/}" &>/dev/null
+        "$0" verify
+    else
+        error "Aborted."
+    fi
 }
 
-COMMAND=$1
-CURRENT_CONNECTION=$(wg show interfaces)
-AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${HOME}"/.config/wvpn/servers 2>/dev/null)
-DEFAULT_SERVER=$(awk -F'=' '/DEFAULT_SERVER/ {print $2}' "${HOME}"/.config/wvpn/defaults 2>/dev/null)
+main() {
+    load_settings
+    case $1 in
+    connect)
+        TARGET_SERVER=wvpn-${2:-$DEFAULT_SERVER}
 
-case ${COMMAND} in
-connect)
-    #Default server check
-    [[ -z "${DEFAULT_SERVER}" ]] && echo -e "${RED}Error: Default server needs to be set.${NC}" && update_default
-    TARGET_SERVER=wvpn-${2:-$DEFAULT_SERVER}
+        echo "# Connecting to ${TARGET_SERVER//*-/} #"
+        [[ "${CURRENT_CONNECTION}" != "${TARGET_SERVER}" ]] || error "already connected to ${TARGET_SERVER//*-/}."
+        [[ -z "${CURRENT_CONNECTION}" ]] || server_change
+        sudo wg-quick up "${TARGET_SERVER}" &>/dev/null || error "server does not exist, disconnecting."
+        echo -e "${GREEN}Connected!${NC}"
 
-    echo "# Connecting to ${TARGET_SERVER//*-/} #"
-    [[ ${CURRENT_CONNECTION} != "${TARGET_SERVER}" ]] || error "already connected to ${TARGET_SERVER//*-/}."
-    [[ ! ${CURRENT_CONNECTION} ]] || server_change
-    sudo wg-quick up "${TARGET_SERVER}" &>/dev/null || error "server does not exist, disconnecting."
-    echo -e "${GREEN}Connected!${NC}"
+        #Verifies connection, always done
+        verify_connection
+        ;;
 
-    #Verifies connection, always done
-    CURRENT_CONNECTION=${TARGET_SERVER}
-    verify_connection
-    ;;
+    disconnect)
+        echo "# Disconnecting VPN #"
+        sudo wg-quick down "${CURRENT_CONNECTION}" &>/dev/null || error "not connected."
+        echo -e "${GREEN}Disconnected${NC}"
+        ;;
 
-disconnect)
-    echo "# Disconnecting VPN #"
-    sudo wg-quick down "${CURRENT_CONNECTION}" &>/dev/null || error "not connected."
-    echo -e "${GREEN}Disconnected${NC}"
-    ;;
+    kill-switch)
+        TARGET_SERVER=${3:-$DEFAULT_SERVER}
+        [[ $2 =~ on|off ]] || help
+        kill_switch "$2" "${TARGET_SERVER}"
+        ;;
 
-kill-switch)
-    TARGET_SERVER=${3:-$DEFAULT_SERVER}
-    [[ $2 =~ on|off ]] || help
-    kill_switch "$2" "${TARGET_SERVER}"
-    ;;
-
-list | ls | l)
-    #Option to view current default server
-    if [[ $2 == default ]]; then
-        echo -e "${GREEN}Default server is set to: ${DEFAULT_SERVER:-"None"}${NC}"
-        exit 0
-    fi
-    echo "# Available servers #"
-    echo "---------------------"
-    echo -e "$(cat "${HOME}"/.config/wvpn/servers)" || error "no server list found. Try updating."
-    ;;
-
-start-up)
-    TARGET_SERVER=${3:-$DEFAULT_SERVER}
-    grep -q "${TARGET_SERVER}" <<< "${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
-    startup "$2" "${TARGET_SERVER}"
-    ;;
-
-status)
-    [[ ${CURRENT_CONNECTION} ]] || error "not connected."
-    sudo wg
-    ;;
-
-update)
-    if [[ $2 == "default" ]]; then
-        update_default "$3"
-
-    elif [[ $2 == "servers" ]]; then
-        [[ ${UID} == 0 ]] || error "this command must be run as root."
-
-        TARGET_HOME=$(eval echo ~"${SUDO_USER}")
-        SERVER_LIST="${TARGET_HOME}/.config/wvpn/servers"
-        DEFAULTS="${TARGET_HOME}/.config/wvpn/defaults"
-        read -r PROVIDER IP DNS <<< "$(awk -F'=' 'BEGIN {ORS=" "} NR>=2 {print $2}' ${DEFAULTS} 2>/dev/null)"
-        [[ ${PROVIDER} ]] || error "No default provider found."
-
-        echo "# Connecting to provider #"
-        curl -sL "${PROVIDER}" -o wvpn-wg.sh
-
-        #Injecting server list construction
-        LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
-        SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./servers.tmp"
-        sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
-
-        #Injecting IP version control
-        ADDRESS_SETTING='${ADDRESS}'
-        [[ ${IP} -eq 4 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
-        [[ ${IP} -eq 6 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
-        REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
-        sed -i "${REGEX}" ./wvpn-wg.sh
-
-        #Injecting config file renaming
-        REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
-        sed -i "${REGEX}" ./wvpn-wg.sh
-
-        $(bash ./wvpn-wg.sh) &>/dev/null
-        [[ $? -ne 0 ]] || error "Installation failed."
-
-        #Injecting DNS
-        if [[ ${DNS} ]]; then
-            for file in /etc/wireguard/wvpn*; do
-                LINE=$(sed -n '/DNS/=' "$file")
-                if [[ $LINE ]]; then
-                    sed -i "s/DNS =.*/DNS = ${DNS}/g" "$file"
-                else
-                    sed -i "${LINE}i DNS = ${DNS}" "$file"
-                fi
-            done
+    list | ls | l)
+        #Option to view current default server
+        if [[ $2 == default ]]; then
+            echo -e "${GREEN}Default server is set to: ${DEFAULT_SERVER:-"None"}${NC}"
+            exit 0
         fi
-
-        sort --version-sort ./servers.tmp > "${SERVER_LIST}"
-
-        chown -R "${SUDO_USER}": "${TARGET_HOME}/.config/wvpn"
-        rm ./servers.tmp ./wvpn-wg.sh
-        echo -e "\n\n# Available servers #"
+        echo "# Available servers #"
         echo "---------------------"
-        echo -e "$(cat "${TARGET_HOME}"/.config/wvpn/servers)"
-        echo -e "\nInstalled! Please wait up to 60 seconds for your public key to be added to the servers."
-        echo "NOTE: Kill switch has been removed!"
-    else
+        echo -e "$(cat ${SERVER_LIST})" || error "no server list found. Try updating."
+        ;;
+
+    start-up)
+        TARGET_SERVER=${3:-$DEFAULT_SERVER}
+        grep -q "${TARGET_SERVER}" <<<"${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
+        startup "$2" "${TARGET_SERVER}"
+        ;;
+
+    status)
+        [[ ${CURRENT_CONNECTION} ]] || error "not connected."
+        sudo wg
+        ;;
+
+    update)
+        if [[ $2 == "default" ]]; then
+            update_default "$3"
+
+        elif [[ $2 == "servers" ]]; then
+            [[ ${UID} == 0 ]] || error "this command must be run as root."
+            [[ ${PROVIDER} ]] || error "No default provider found."
+
+            echo "# Connecting to provider #"
+            curl -sL "${PROVIDER}" -o wvpn-wg.sh
+
+            #Injecting server list construction
+            LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
+            SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./servers.tmp"
+            sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
+
+            #Injecting IP version control
+            ADDRESS_SETTING='${ADDRESS}'
+            [[ ${IP} -eq 4 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
+            [[ ${IP} -eq 6 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
+            REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
+            sed -i "${REGEX}" ./wvpn-wg.sh
+
+            #Injecting config file renaming
+            REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
+            sed -i "${REGEX}" ./wvpn-wg.sh
+
+            $(bash ./wvpn-wg.sh) &>/dev/null
+            [[ $? -ne 0 ]] || error "Installation failed."
+
+            #Injecting DNS
+            if [[ ${DNS} ]]; then
+                for file in /etc/wireguard/wvpn*; do
+                    LINE=$(sed -n '/DNS/=' "$file")
+                    if [[ $LINE ]]; then
+                        sed -i "s/DNS =.*/DNS = ${DNS}/g" "$file"
+                    else
+                        sed -i "${LINE}i DNS = ${DNS}" "$file"
+                    fi
+                done
+            fi
+
+            sort --version-sort ./servers.tmp >"${SERVER_LIST}"
+
+            chown -R "${SUDO_USER}": "${HOME}/.config/wvpn"
+            rm ./servers.tmp ./wvpn-wg.sh
+            echo -e "\n\n# Available servers #"
+            echo "---------------------"
+            echo -e "$(cat ${SERVER_LIST})"
+            echo -e "\nInstalled! Please wait up to 60 seconds for your public key to be added to the servers."
+            echo "NOTE: Kill switch has been removed!"
+        else
+            help
+        fi
+        ;;
+
+    verify)
+        [[ ${CURRENT_CONNECTION} ]] || error "not connected."
+        verify_connection
+        ;;
+
+    help | -h)
         help
-    fi
-    ;;
+        ;;
 
-verify)
-    [[ ${CURRENT_CONNECTION} ]] || error "not connected."
-    verify_connection
-    ;;
+    *)
+        help
+        ;;
+    esac
+}
 
-help | -h)
-    help
-    ;;
-
-*)
-    help
-    ;;
-esac
+main "$@"
 exit 0

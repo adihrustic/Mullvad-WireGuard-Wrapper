@@ -42,7 +42,7 @@ sudo ./setup.sh install
 wvpn connect <server>
 ```
 
-It it also possible to leave out server specification and connect to the default server that was set during the installation:
+It is also possible to leave out server specification and connect to the default server that was set during the installation:
 ```
 wvpn connect
 ```
@@ -109,7 +109,7 @@ This is likely due to the network manager not using openresolv. [See here for a 
 ### Unable to remotely access local machines.
 Enabling the kill switch blocks all local traffic. Either add iptable rules to circumvent this or disable the kill switch.
 ### Was this previously the wrapper only intended for the mullvad VPN?
-Yes. However I choose to implement a more general solution.
+Yes. However, I chose to implement a more general solution.
 
 ## More information
 * [Running WireGuard with Mullvad on Linux](https://mullvad.net/en/guides/wireguard-and-mullvad-vpn) - Mullvad's official guide.
