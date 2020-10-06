@@ -103,8 +103,8 @@ install() {
 
     #Injecting server list construction
     LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
-    SERVER="\\\techo \"\$CODE:\t\${SERVER_LOCATIONS[\"\$CODE\"]}\" >> ./servers.tmp"
-    sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
+    INJECTION="\\\techo \"\${SERVER_LOCATIONS[\"\${CODE}\"]}, \${CODE}\" >> ./servers.tmp"
+    sed -i "${LINE}i${INJECTION}" ./wvpn-wg.sh
 
     #Injecting IP version control
     [[ $IP == "B" ]] && ADDRESS_SETTING='$ADDRESS'        #Both
@@ -117,8 +117,12 @@ install() {
     REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
     sed -i "$REGEX" ./wvpn-wg.sh
 
+    #Run the provided installer
     $(bash ./wvpn-wg.sh) &>/dev/null
     [[ $? -ne 0 ]] || exit 1
+
+    #Setting defaults
+    mkdir -p "${CONFIG_ROOT}"
 
     #Injecting DNS
     if [[ ${DNS} ]]; then
@@ -143,12 +147,36 @@ install() {
             sed -i "/Peer/i$PostUp\n$PreDown" "$file"
         done
     fi
-    #Setting defaults
-    mkdir -p "${CONFIG_ROOT}"
-    sort --version-sort ./servers.tmp >"${SERVER_LIST}"
+
+    #Pretty print servers
+    sed -i 's/, USA/ USA/g' ./servers.tmp  # Group US states together with country
+    :>"${SERVER_LIST}"                     # Create empty server list file
+
+    while read -r SERVER; do
+        # We keep the list sorted by the country, 
+        # although this data is in the second column
+        LOC=${SERVER% *}
+        CODE=${SERVER/* }
+            
+        # Should the city already exist, we append the server code to it
+        if grep -q "${LOC}" "${SERVER_LIST}"; then
+            sed -i "\$s/$/ $CODE/" "${SERVER_LIST}"
+        else 
+            echo "${SERVER}" >> "${SERVER_LIST}"
+        fi
+    done <<< "$(column -ts ',' ./servers.tmp)" 
+
+    #This sorts the server codes in the last column by their numbers
+    while read -r SERVER; do
+        CODES=$(echo "$SERVER" | grep -o '\w\+[0-9]\+.*$')
+        SORTED=$(echo "$CODES" | xargs -n1 | sort --version-sort | xargs)
+        sed -i "s/$CODES/$SORTED/" "${SERVER_LIST}"
+    done < "${SERVER_LIST}"
+
+    #Final touches
     cat "${SERVER_LIST}"
     echo -e "\nFrom the above list, please select a default server:"
-    AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${SERVER_LIST}")
+    AVAILABLE_SERVERS=$(grep -o '[a-z]\{2\}[0-9]\+' "${SERVER_LIST}" | sort --version-sort)
     PS3="> "
     select opt in $AVAILABLE_SERVERS; do
         [[ $REPLY ]] || continue

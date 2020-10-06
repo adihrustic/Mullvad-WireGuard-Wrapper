@@ -33,6 +33,10 @@ error() {
 load_settings() {
     if [ "$(id -u)" -eq 0 ]; then HOME=$(eval echo ~"${SUDO_USER}"); fi
 
+    CURRENT_CONNECTION=$(wg show interfaces)
+    SERVER_LIST="${HOME}/.config/wvpn/servers"
+    AVAILABLE_SERVERS=$(grep -o '[a-z]\{2\}[0-9]\+' "${SERVER_LIST}" 2>/dev/null)
+
     if [[ -f ${HOME}/.config/wvpn/defaults ]]; then
         source "${HOME}/.config/wvpn/defaults"
 
@@ -44,10 +48,6 @@ load_settings() {
     else
         error "'defaults' file missing in .config directory. Reinstall to avoid further errors."
     fi
-
-    CURRENT_CONNECTION=$(wg show interfaces)
-    SERVER_LIST="${HOME}/.config/wvpn/servers"
-    AVAILABLE_SERVERS=$(awk -F':' '{print $1}' "${SERVER_LIST}" 2>/dev/null)
 }
 
 startup() {
@@ -111,9 +111,83 @@ update_default() {
         done
     fi
 
-    grep -q "${TARGET_SERVER}" <<<"${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
+    grep -xq "${TARGET_SERVER}" <<<"${AVAILABLE_SERVERS}" || error "Invalid server, aborting."
     sed -i "s/\(DEFAULT_SERVER\).*/\1=${TARGET_SERVER}/" "${HOME}"/.config/wvpn/defaults
     echo -e "${GREEN}Default set to ${TARGET_SERVER}!${NC}"
+}
+
+update_servers() {
+    local LINE INJECTION ADDRESS_SETTING REGEX LOC CODE
+    [[ ${UID} == 0 ]] || error "this command must be run as root."
+    [[ ${PROVIDER} ]] || error "No default provider found."
+    echo "# Connecting to provider #"
+    curl -sL "${PROVIDER}" -o wvpn-wg.sh
+
+    #Injecting server list construction
+    LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
+    INJECTION="\\\techo \"\${SERVER_LOCATIONS[\"\${CODE}\"]}, \${CODE}\" >> ./servers.tmp"
+    sed -i "${LINE}i${INJECTION}" ./wvpn-wg.sh
+
+    #Injecting IP version control
+    ADDRESS_SETTING='${ADDRESS}'
+    [[ $IP == "B" ]] && ADDRESS_SETTING='$ADDRESS'        #Both
+    [[ ${IP} -eq 4 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
+    [[ ${IP} -eq 6 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
+    REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
+    sed -i "${REGEX}" ./wvpn-wg.sh
+
+    #Injecting config file renaming
+    REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
+    sed -i "${REGEX}" ./wvpn-wg.sh
+
+    #Run the provided installer
+    $(bash ./wvpn-wg.sh) &>/dev/null
+    [[ $? -ne 0 ]] || error "Installation failed."
+
+    #Injecting DNS
+    if [[ ${DNS} ]]; then
+        for file in /etc/wireguard/wvpn*; do
+            LINE=$(sed -n '/DNS/=' "$file")
+            if [[ $LINE ]]; then
+                sed -i "s/DNS =.*/DNS = ${DNS}/g" "$file"
+            else
+                sed -i "${LINE}i DNS = ${DNS}" "$file"
+            fi
+        done
+    fi
+
+    #Pretty print servers
+    sed -i 's/, USA/ USA/g' ./servers.tmp  # Group US states together with country
+    :>"${SERVER_LIST}"                     # Create empty server list file
+
+    while read -r SERVER; do
+        # We keep the list sorted by the country, 
+        # although this data is in the second column
+        LOC=${SERVER% *}
+        CODE=${SERVER/* }
+        
+        # Should the city already exist, we append the server code to it
+        if grep -q "${LOC}" "${SERVER_LIST}"; then
+            sed -i "\$s/$/ $CODE/" "${SERVER_LIST}"
+        else 
+            echo "${SERVER}" >> "${SERVER_LIST}"
+        fi
+    done <<< "$(column -ts ',' ./servers.tmp)" 
+
+    #This sorts the server codes in the last column by their numbers
+    while read -r SERVER; do
+        CODES=$(echo "$SERVER" | grep -o '\w\+[0-9]\+.*$')
+        SORTED=$(echo "$CODES" | xargs -n1 | sort --version-sort | xargs)
+        sed -i "s/$CODES/$SORTED/" "${SERVER_LIST}"
+    done < "${SERVER_LIST}"
+
+    chown -R "${SUDO_USER}": "${HOME}/.config/wvpn"
+    rm ./servers.tmp ./wvpn-wg.sh
+    echo -e "\n\n# Available servers #"
+    echo "---------------------"
+    echo -e "$(cat ${SERVER_LIST})"
+    echo -e "\nInstalled! Please wait up to 60 seconds for your public key to be added to the servers."
+    echo "NOTE: Kill switch has been removed!"
 }
 
 server_change() {
@@ -242,54 +316,8 @@ main() {
     update)
         if [[ $2 == "default" ]]; then
             update_default "$3"
-
         elif [[ $2 == "servers" ]]; then
-            [[ ${UID} == 0 ]] || error "this command must be run as root."
-            [[ ${PROVIDER} ]] || error "No default provider found."
-
-            echo "# Connecting to provider #"
-            curl -sL "${PROVIDER}" -o wvpn-wg.sh
-
-            #Injecting server list construction
-            LINE=$(sed -n '/mkdir -p \/etc\/wireguard/=' ./wvpn-wg.sh)
-            SERVER="\\\techo \"\${CODE}:\t\${SERVER_LOCATIONS[\"\${CODE}\"]}\" >> ./servers.tmp"
-            sed -i "${LINE}i${SERVER}" ./wvpn-wg.sh
-
-            #Injecting IP version control
-            ADDRESS_SETTING='${ADDRESS}'
-            [[ ${IP} -eq 4 ]] && ADDRESS_SETTING='${ADDRESS\/,*\/}' #v4
-            [[ ${IP} -eq 6 ]] && ADDRESS_SETTING='${ADDRESS\/*,\/}' #v6
-            REGEX="s/\(Address = \).*/\1${ADDRESS_SETTING}/"
-            sed -i "${REGEX}" ./wvpn-wg.sh
-
-            #Injecting config file renaming
-            REGEX="s/\(CONFIGURATION_FILE=.*wireguard\/\).*\(-\$CODE.conf\)/\1wvpn\2/"
-            sed -i "${REGEX}" ./wvpn-wg.sh
-
-            $(bash ./wvpn-wg.sh) &>/dev/null
-            [[ $? -ne 0 ]] || error "Installation failed."
-
-            #Injecting DNS
-            if [[ ${DNS} ]]; then
-                for file in /etc/wireguard/wvpn*; do
-                    LINE=$(sed -n '/DNS/=' "$file")
-                    if [[ $LINE ]]; then
-                        sed -i "s/DNS =.*/DNS = ${DNS}/g" "$file"
-                    else
-                        sed -i "${LINE}i DNS = ${DNS}" "$file"
-                    fi
-                done
-            fi
-
-            sort --version-sort ./servers.tmp >"${SERVER_LIST}"
-
-            chown -R "${SUDO_USER}": "${HOME}/.config/wvpn"
-            rm ./servers.tmp ./wvpn-wg.sh
-            echo -e "\n\n# Available servers #"
-            echo "---------------------"
-            echo -e "$(cat ${SERVER_LIST})"
-            echo -e "\nInstalled! Please wait up to 60 seconds for your public key to be added to the servers."
-            echo "NOTE: Kill switch has been removed!"
+            update_servers
         else
             help
         fi
